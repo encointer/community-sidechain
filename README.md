@@ -1,4 +1,25 @@
-# integritee-worker
+# Encointer Community Sidechain
+This repository is a detached fork of the [integritee-worker](https://github.com/integritee-network/worker).
+
+## Handle Upstream Updates
+There is an `upstream/master` branch, which is used to track the upstream repository.
+
+1.  Add upstream remote.
+```bash
+git remote add upstream git@github.com:integritee-network/worker.git
+```
+
+2. Sync `upstream/master` branch
+```bash
+git checkout upstream/master
+git pull upstream master
+git push
+```
+3. Create PR to master
+
+Alternatively, we can also track the release branches of `integritee-worker` - to be discussed.
+
+## integritee-worker
 
 Integritee worker for Integritee [node](https://github.com/integritee-network/integritee-node) or [parachain](https://github.com/integritee-network/parachain)
 
