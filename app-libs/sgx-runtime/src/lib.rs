@@ -39,13 +39,16 @@ pub use evm::{
 };
 
 use core::convert::{TryFrom, TryInto};
+use encointer_primitives::balances::{BalanceType, Demurrage};
 use frame_support::weights::ConstantMultiplier;
+use frame_system::{EnsureRoot, EnsureSigned};
 use pallet_transaction_payment::CurrencyAdapter;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 use sp_runtime::{
 	create_runtime_str, generic,
-	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT},
+	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Verify},
+	MultiSignature,
 };
 use sp_std::prelude::*;
 use sp_version::RuntimeVersion;
@@ -54,7 +57,8 @@ use sp_version::RuntimeVersion;
 pub use itp_sgx_runtime_primitives::{
 	constants::SLOT_DURATION,
 	types::{
-		AccountData, AccountId, Address, Balance, BlockNumber, Hash, Header, Index, Signature,
+		AccountData, AccountId, Address, Balance, BlockNumber, Hash, Header, Index, Moment,
+		Signature,
 	},
 };
 
@@ -256,20 +260,74 @@ impl pallet_parentchain::Config for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const MomentsPerDay: Moment = 86_400_000; // [ms/d]
+	pub const DefaultDemurrage: Demurrage = Demurrage::from_bits(0x0000000000000000000001E3F0A8A973_i128);
+	/// 0.000005
+	pub const EncointerExistentialDeposit: BalanceType = BalanceType::from_bits(0x0000000000000000000053e2d6238da4_i128);
+	pub const MeetupSizeTarget: u64 = 10;
+	pub const MeetupMinSize: u64 = 3;
+	pub const MeetupNewbieLimitDivider: u64 = 2;
+}
+
+impl pallet_randomness_collective_flip::Config for Runtime {}
+
+impl pallet_encointer_scheduler::Config for Runtime {
+	type Event = Event;
+	type OnCeremonyPhaseChange = pallet_encointer_ceremonies::Pallet<Runtime>;
+	type MomentsPerDay = MomentsPerDay;
+	type CeremonyMaster = EnsureRoot<AccountId>;
+	type WeightInfo = ();
+}
+
+impl pallet_encointer_communities::Config for Runtime {
+	type Event = Event;
+	type CommunityMaster = EnsureRoot<AccountId>;
+	type TrustableForNonDestructiveAction = EnsureSigned<AccountId>;
+	type WeightInfo = ();
+}
+
+impl pallet_encointer_ceremonies::Config for Runtime {
+	type Event = Event;
+	type CeremonyMaster = EnsureRoot<AccountId>;
+	type Public = <MultiSignature as Verify>::Signer;
+	type Signature = MultiSignature;
+	// Note: in production networks it is advised to use babes randomness source.
+	// But we have low security requirements here, so it should be fine.
+	type RandomnessSource = pallet_randomness_collective_flip::Pallet<Runtime>;
+	type MeetupSizeTarget = MeetupSizeTarget;
+	type MeetupMinSize = MeetupMinSize;
+	type MeetupNewbieLimitDivider = MeetupNewbieLimitDivider;
+	type WeightInfo = ();
+}
+
+impl pallet_encointer_balances::Config for Runtime {
+	type Event = Event;
+	type DefaultDemurrage = DefaultDemurrage;
+	type ExistentialDeposit = EncointerExistentialDeposit;
+	type WeightInfo = ();
+	type CeremonyMaster = EnsureRoot<AccountId>;
+}
+
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
-	pub enum Runtime where
+	pub struct Runtime where
 		Block = Block,
 		NodeBlock = opaque::Block,
-		UncheckedExtrinsic = UncheckedExtrinsic
+		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Parentchain: pallet_parentchain::{Pallet, Call, Storage},
+		EncointerScheduler: pallet_encointer_scheduler::{Pallet, Call, Storage, Config<T>, Event},
+		EncointerCeremonies: pallet_encointer_ceremonies::{Pallet, Call, Storage, Config<T>, Event<T>},
+		EncointerBalances: pallet_encointer_balances::{Pallet, Call, Storage, Config, Event<T>},
+		EncointerCommunities: pallet_encointer_communities::{Pallet, Call, Storage, Config, Event<T>},
 	}
 );
 
@@ -279,10 +337,10 @@ construct_runtime!(
 // compiler flags withing the macro.
 #[cfg(feature = "evm")]
 construct_runtime!(
-	pub enum Runtime where
+	pub struct Runtime where
 		Block = Block,
 		NodeBlock = opaque::Block,
-		UncheckedExtrinsic = UncheckedExtrinsic
+		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},

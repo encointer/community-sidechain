@@ -48,6 +48,13 @@ sp-version = { default-features = false, git = "https://github.com/paritytech/su
 pallet-evm = { default-features = false, optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "polkadot-v0.9.28" }
 pallet-parentchain = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "develop" }
 
+# Encointer dependencies
+encointer-primitives = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "polkadot_v0.9.28", features=["serde_derive"] }
+pallet-encointer-balances = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "polkadot_v0.9.28" }
+pallet-encointer-ceremonies = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "polkadot_v0.9.28" }
+pallet-encointer-communities = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "polkadot_v0.9.28" }
+pallet-encointer-scheduler = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "polkadot_v0.9.28" }
+
 [features]
 default = ["std"]
 # Compile the sgx-runtime with evm-pallet support in `no_std`.
@@ -65,6 +72,10 @@ runtime-benchmarks = [
     "frame-system-benchmarking",
     "frame-system/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
+    "pallet-encointer-balances/runtime-benchmarks",
+    "pallet-encointer-ceremonies/runtime-benchmarks",
+    "pallet-encointer-communities/runtime-benchmarks",
+    "pallet-encointer-scheduler/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
 ]
@@ -73,12 +84,17 @@ std = [
     "scale-info/std",
     "serde",
     "itp-sgx-runtime-primitives/std",
+    "encointer-primitives/std",
     "frame-executive/std",
     "frame-support/std",
     "frame-system/std",
     "frame-system-rpc-runtime-api/std",
     "pallet-aura/std",
     "pallet-balances/std",
+    "pallet-encointer-balances/std",
+    "pallet-encointer-ceremonies/std",
+    "pallet-encointer-communities/std",
+    "pallet-encointer-scheduler/std",
     "pallet-grandpa/std",
     "pallet-randomness-collective-flip/std",
     "pallet-sudo/std",
