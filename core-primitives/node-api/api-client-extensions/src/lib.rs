@@ -21,6 +21,7 @@ pub use substrate_api_client::{rpc::WsRpcClient, Api, ApiClientError};
 
 pub mod account;
 pub mod chain;
+pub mod encointer;
 pub mod pallet_teeracle;
 pub mod pallet_teerex;
 pub mod pallet_teerex_api_mock;

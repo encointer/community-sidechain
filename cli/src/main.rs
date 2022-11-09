@@ -29,6 +29,7 @@ extern crate log;
 
 mod base_cli;
 mod benchmark;
+mod ceremonies;
 mod command_utils;
 mod commands;
 #[cfg(feature = "evm")]
@@ -39,7 +40,6 @@ mod trusted_base_cli;
 mod trusted_command_utils;
 mod trusted_commands;
 mod trusted_operation;
-
 use crate::commands::Commands;
 use clap::Parser;
 
