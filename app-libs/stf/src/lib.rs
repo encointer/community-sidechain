@@ -61,6 +61,7 @@ pub type AuthorityId = <Signature as Verify>::Signer;
 pub type AccountId = AccountId32;
 pub type Hash = H256;
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
+pub type Moment = u64;
 
 pub type ShardIdentifier = H256;
 

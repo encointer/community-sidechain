@@ -2729,6 +2729,7 @@ dependencies = [
  "pallet-balances",
  "pallet-encointer-balances",
  "pallet-encointer-ceremonies",
+ "pallet-encointer-scheduler",
  "pallet-parentchain",
  "pallet-sudo",
  "parity-scale-codec",

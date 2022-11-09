@@ -49,11 +49,11 @@ pallet-evm = { default-features = false, optional = true, git = "https://github.
 pallet-parentchain = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "develop" }
 
 # Encointer dependencies
-encointer-primitives = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "polkadot_v0.9.28", features=["serde_derive"] }
-pallet-encointer-balances = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "polkadot_v0.9.28" }
-pallet-encointer-ceremonies = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "polkadot_v0.9.28" }
-pallet-encointer-communities = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "polkadot_v0.9.28" }
-pallet-encointer-scheduler = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "polkadot_v0.9.28" }
+encointer-primitives = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "master", features=["serde_derive"] }
+pallet-encointer-balances = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "master" }
+pallet-encointer-ceremonies = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "master" }
+pallet-encointer-communities = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "master" }
+pallet-encointer-scheduler = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "master" }
 
 [features]
 default = ["std"]

@@ -22,18 +22,24 @@ use sp_core::{H160, H256, U256};
 use std::vec::Vec;
 
 use crate::{
-	helpers::ensure_enclave_signer_account, AccountId, KeyPair, ShardIdentifier, Signature,
+	helpers::ensure_enclave_signer_account, AccountId, KeyPair, Moment, ShardIdentifier, Signature,
 	StfError, TrustedOperation,
 };
 use codec::{Decode, Encode};
 use encointer_primitives::{
 	balances::{BalanceType, FeeConversionFactorType},
+	ceremonies::{
+		ClaimOfAttendance, CommunityCeremony, EndorsementTicketsType, InactivityTimeoutType,
+		MeetupIndexType, MeetupTimeOffsetType, ProofOfAttendance, ReputationLifetimeType,
+	},
 	communities::CommunityIdentifier,
+	scheduler::CeremonyPhaseType,
 };
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
 use itp_stf_interface::ExecuteCall;
+use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
 use itp_utils::stringify::account_id_to_string;
 use log::*;
@@ -57,6 +63,29 @@ pub enum TrustedCall {
 	encointer_balance_transfer(AccountId, AccountId, CommunityIdentifier, BalanceType),
 	encointer_set_fee_conversion_factor(AccountId, FeeConversionFactorType),
 	encointer_transfer_all(AccountId, AccountId, CommunityIdentifier),
+	ceremonies_register_participant(
+		AccountId,
+		CommunityIdentifier,
+		Option<ProofOfAttendance<Signature, AccountId>>,
+	),
+	ceremonies_upgrade_registration(
+		AccountId,
+		CommunityIdentifier,
+		ProofOfAttendance<Signature, AccountId>,
+	),
+	ceremonies_unregister_participant(AccountId, CommunityIdentifier, Option<CommunityCeremony>),
+	ceremonies_attest_attendees(AccountId, CommunityIdentifier, u32, Vec<AccountId>),
+	ceremonies_attest_claims(AccountId, Vec<ClaimOfAttendance<Signature, AccountId, Moment>>),
+	ceremonies_endorse_newcomer(AccountId, CommunityIdentifier, AccountId),
+	ceremonies_claim_rewards(AccountId, CommunityIdentifier, Option<MeetupIndexType>),
+	ceremonies_set_inactivity_timeout(AccountId, InactivityTimeoutType),
+	ceremonies_set_endorsement_tickets_per_bootstrapper(AccountId, EndorsementTicketsType),
+	ceremonies_set_endorsement_tickets_per_reputable(AccountId, EndorsementTicketsType),
+	ceremonies_set_reputation_lifetime(AccountId, ReputationLifetimeType),
+	ceremonies_set_meetup_time_offset(AccountId, MeetupTimeOffsetType),
+	ceremonies_set_time_tolerance(AccountId, Moment),
+	ceremonies_set_location_tolerance(AccountId, u32),
+	ceremonies_purge_community_ceremony(AccountId, CommunityCeremony),
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -112,6 +141,25 @@ impl TrustedCall {
 			TrustedCall::encointer_balance_transfer(sender_account, ..) => sender_account,
 			TrustedCall::encointer_set_fee_conversion_factor(sender_account, ..) => sender_account,
 			TrustedCall::encointer_transfer_all(sender_account, ..) => sender_account,
+			TrustedCall::ceremonies_register_participant(sender_account, ..) => sender_account,
+			TrustedCall::ceremonies_upgrade_registration(sender_account, ..) => sender_account,
+			TrustedCall::ceremonies_unregister_participant(sender_account, ..) => sender_account,
+			TrustedCall::ceremonies_attest_attendees(sender_account, ..) => sender_account,
+			TrustedCall::ceremonies_attest_claims(sender_account, ..) => sender_account,
+			TrustedCall::ceremonies_endorse_newcomer(sender_account, ..) => sender_account,
+			TrustedCall::ceremonies_claim_rewards(sender_account, ..) => sender_account,
+			TrustedCall::ceremonies_set_inactivity_timeout(sender_account, ..) => sender_account,
+			TrustedCall::ceremonies_set_endorsement_tickets_per_bootstrapper(
+				sender_account,
+				..,
+			) => sender_account,
+			TrustedCall::ceremonies_set_endorsement_tickets_per_reputable(sender_account, ..) =>
+				sender_account,
+			TrustedCall::ceremonies_set_reputation_lifetime(sender_account, ..) => sender_account,
+			TrustedCall::ceremonies_set_meetup_time_offset(sender_account, ..) => sender_account,
+			TrustedCall::ceremonies_set_time_tolerance(sender_account, ..) => sender_account,
+			TrustedCall::ceremonies_set_location_tolerance(sender_account, ..) => sender_account,
+			TrustedCall::ceremonies_purge_community_ceremony(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -316,6 +364,316 @@ impl ExecuteCall for TrustedCallSigned {
 				})?;
 				Ok(())
 			},
+			TrustedCall::ceremonies_register_participant(who, cid, proof) => {
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+
+				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
+					== CeremonyPhaseType::Assigning
+				{
+					return Err(Self::Error::Dispatch(
+						"registering participants can only be done during registering or attesting phase"
+							.to_string(),
+					))
+				}
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::register_participant {
+					cid,
+					proof,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Ceremonies register participant error: {:?}",
+						e.error
+					))
+				})?;
+				Ok(())
+			},
+			TrustedCall::ceremonies_upgrade_registration(who, cid, proof) => {
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+
+				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
+					== CeremonyPhaseType::Assigning
+				{
+					return Err(Self::Error::Dispatch(
+						"upgrading registration can only be done during registering or attesting phase"
+							.to_string(),
+					))
+				}
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::upgrade_registration {
+					cid,
+					proof: proof.clone(),
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Ceremonies upgrade registration error: {:?}",
+						e.error
+					))
+				})?;
+				Ok(())
+			},
+			TrustedCall::ceremonies_unregister_participant(
+				who,
+				cid,
+				maybe_reputation_community_ceremony,
+			) => {
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+
+				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
+					== CeremonyPhaseType::Assigning
+				{
+					return Err(Self::Error::Dispatch(
+						"unregistering participant can only be done during registering or attesting phase"
+							.to_string(),
+					))
+				}
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::unregister_participant {
+					cid,
+					maybe_reputation_community_ceremony,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Ceremonies unregister participant error: {:?}",
+						e.error
+					))
+				})?;
+				Ok(())
+			},
+			TrustedCall::ceremonies_attest_attendees(
+				who,
+				cid,
+				number_of_participants_vote,
+				attestations,
+			) => {
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+
+				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
+					!= CeremonyPhaseType::Attesting
+				{
+					return Err(Self::Error::Dispatch(
+						"attendees attestation can only be done during attesting phase".to_string(),
+					))
+				}
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::attest_attendees {
+					cid,
+					number_of_participants_vote,
+					attestations,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Ceremonies attendees attestation error: {:?}",
+						e.error
+					))
+				})?;
+				Ok(())
+			},
+			TrustedCall::ceremonies_attest_claims(who, claims) => {
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+
+				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
+					!= CeremonyPhaseType::Attesting
+				{
+					return Err(Self::Error::Dispatch(
+						"claims attestation can only be done during attesting phase".to_string(),
+					))
+				}
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::attest_claims { claims }
+					.dispatch_bypass_filter(origin)
+					.map_err(|e| {
+						Self::Error::Dispatch(format!(
+							"Ceremonies claims attestation error: {:?}",
+							e.error
+						))
+					})?;
+				Ok(())
+			},
+			TrustedCall::ceremonies_endorse_newcomer(who, cid, newbie) => {
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::endorse_newcomer {
+					cid,
+					newbie,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Ceremonies endorse newcomer error: {:?}",
+						e.error
+					))
+				})?;
+				Ok(())
+			},
+			TrustedCall::ceremonies_claim_rewards(who, cid, maybe_meetup_index) => {
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+
+				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
+					== CeremonyPhaseType::Assigning
+				{
+					return Err(Self::Error::Dispatch(
+						"claiming rewards can not be done during assigning phase".to_string(),
+					))
+				}
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::claim_rewards {
+					cid,
+					maybe_meetup_index,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!("Ceremonies claim rewards error: {:?}", e.error))
+				})?;
+				Ok(())
+			},
+			TrustedCall::ceremonies_set_inactivity_timeout(who, inactivity_timeout) => {
+				//Master check
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::set_inactivity_timeout {
+					inactivity_timeout,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Ceremonies set inactivity timeout error: {:?}",
+						e.error
+					))
+				})?;
+				Ok(())
+			},
+			TrustedCall::ceremonies_set_endorsement_tickets_per_bootstrapper(
+				who,
+				endorsement_tickets_per_bootstrapper,
+			) => {
+				//Master check
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::set_endorsement_tickets_per_bootstrapper {
+					endorsement_tickets_per_bootstrapper,
+				}
+					.dispatch_bypass_filter(origin)
+					.map_err(|e| {
+						Self::Error::Dispatch(format!(
+							"Ceremonies set endorsement ticket per bootstrapper error: {:?}",
+							e.error
+						))
+					})?;
+				Ok(())
+			},
+			TrustedCall::ceremonies_set_endorsement_tickets_per_reputable(
+				who,
+				endorsement_tickets_per_reputable,
+			) => {
+				//Master check
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::set_endorsement_tickets_per_reputable {
+					endorsement_tickets_per_reputable,
+				}
+					.dispatch_bypass_filter(origin)
+					.map_err(|e| {
+						Self::Error::Dispatch(format!(
+							"Ceremonies set endorsement ticket per reputable error: {:?}",
+							e.error
+						))
+					})?;
+				Ok(())
+			},
+			TrustedCall::ceremonies_set_reputation_lifetime(who, reputation_lifetime) => {
+				//Master check
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::set_reputation_lifetime {
+					reputation_lifetime,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Ceremonies set reputation lifetime error: {:?}",
+						e.error
+					))
+				})?;
+				Ok(())
+			},
+			TrustedCall::ceremonies_set_meetup_time_offset(who, meetup_time_offset) => {
+				//Check Master
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+
+				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
+					== CeremonyPhaseType::Registering
+				{
+					return Err(Self::Error::Dispatch(
+						"setting meetup time offset can not be done during registering phase"
+							.to_string(),
+					))
+				}
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::set_meetup_time_offset {
+					meetup_time_offset,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Ceremonies set meetup time offset error: {:?}",
+						e.error
+					))
+				})?;
+				Ok(())
+			},
+			TrustedCall::ceremonies_set_time_tolerance(who, time_tolerance) => {
+				//Master check
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::set_time_tolerance {
+					time_tolerance,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Ceremonies set time tolerance error: {:?}",
+						e.error
+					))
+				})?;
+				Ok(())
+			},
+			TrustedCall::ceremonies_set_location_tolerance(who, location_tolerance) => {
+				//Master check
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::set_location_tolerance {
+					location_tolerance,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Ceremonies set location tolerance error: {:?}",
+						e.error
+					))
+				})?;
+				Ok(())
+			},
+			TrustedCall::ceremonies_purge_community_ceremony(who, community_ceremony) => {
+				//Master check
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::purge_community_ceremony {
+					community_ceremony,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Ceremonies purge community ceremony error: {:?}",
+						e.error
+					))
+				})?;
+				Ok(())
+			},
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(from, address, value) => {
 				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);
@@ -439,7 +797,7 @@ impl ExecuteCall for TrustedCallSigned {
 	}
 
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		let key_hashes = Vec::new();
+		let mut key_hashes = Vec::new();
 		match self.call {
 			TrustedCall::balance_set_balance(_, _, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
@@ -450,6 +808,42 @@ impl ExecuteCall for TrustedCallSigned {
 			TrustedCall::encointer_set_fee_conversion_factor(_, _) =>
 				debug!("No storage updates needed..."),
 			TrustedCall::encointer_transfer_all(_, _, _) => debug!("No storage updates needed..."),
+			TrustedCall::ceremonies_set_inactivity_timeout(_, _) =>
+				debug!("No storage updates needed..."),
+			TrustedCall::ceremonies_set_endorsement_tickets_per_bootstrapper(_, _) =>
+				debug!("No storage updates needed..."),
+			TrustedCall::ceremonies_set_endorsement_tickets_per_reputable(_, _) =>
+				debug!("No storage updates needed..."),
+			TrustedCall::ceremonies_set_reputation_lifetime(_, _) =>
+				debug!("No storage updates needed..."),
+			TrustedCall::ceremonies_set_time_tolerance(_, _) =>
+				debug!("No storage updates needed..."),
+			TrustedCall::ceremonies_set_location_tolerance(_, _) =>
+				debug!("No storage updates needed..."),
+			TrustedCall::ceremonies_purge_community_ceremony(_, _) =>
+				debug!("No storage updates needed..."),
+			TrustedCall::ceremonies_register_participant(_, _, _)
+			| TrustedCall::ceremonies_upgrade_registration(_, _, _)
+			| TrustedCall::ceremonies_unregister_participant(_, _, _)
+			| TrustedCall::ceremonies_attest_claims(_, _) => {
+				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
+				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
+				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
+			},
+			TrustedCall::ceremonies_attest_attendees(_, _, _, _)
+			| TrustedCall::ceremonies_claim_rewards(_, _, _) => {
+				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
+				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
+			},
+			TrustedCall::ceremonies_set_meetup_time_offset(_, _) => {
+				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
+			},
+			TrustedCall::ceremonies_endorse_newcomer(_, _, _) => {
+				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
+				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
+				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
+				key_hashes.push(storage_value_key("EncointerCommunities", "Bootstrappers"));
+			},
 			#[cfg(feature = "evm")]
 			_ => debug!("No storage updates needed..."),
 		};
