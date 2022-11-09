@@ -26,6 +26,10 @@ use crate::{
 	StfError, TrustedOperation,
 };
 use codec::{Decode, Encode};
+use encointer_primitives::{
+	balances::{BalanceType, FeeConversionFactorType},
+	communities::CommunityIdentifier,
+};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
@@ -50,6 +54,9 @@ pub enum TrustedCall {
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
+	encointer_balance_transfer(AccountId, AccountId, CommunityIdentifier, BalanceType),
+	encointer_set_fee_conversion_factor(AccountId, FeeConversionFactorType),
+	encointer_transfer_all(AccountId, AccountId, CommunityIdentifier),
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -102,6 +109,9 @@ impl TrustedCall {
 			TrustedCall::balance_transfer(sender_account, ..) => sender_account,
 			TrustedCall::balance_unshield(sender_account, ..) => sender_account,
 			TrustedCall::balance_shield(sender_account, ..) => sender_account,
+			TrustedCall::encointer_balance_transfer(sender_account, ..) => sender_account,
+			TrustedCall::encointer_set_fee_conversion_factor(sender_account, ..) => sender_account,
+			TrustedCall::encointer_transfer_all(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -243,6 +253,69 @@ impl ExecuteCall for TrustedCallSigned {
 				shield_funds(who, value)?;
 				Ok(())
 			},
+			TrustedCall::encointer_balance_transfer(from, to, community_id, value) => {
+				let origin = ita_sgx_runtime::Origin::signed(from.clone());
+				debug!(
+					"encointer_balance_transfer({}, {}, {}, {})",
+					account_id_to_string(&from),
+					account_id_to_string(&to),
+					community_id,
+					value
+				);
+				ita_sgx_runtime::EncointerBalancesCall::<Runtime>::transfer {
+					dest: AccountId::from(to),
+					community_id,
+					amount: value,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Encointer Balance Transfer error: {:?}",
+						e.error
+					))
+				})?;
+				Ok(())
+			},
+			TrustedCall::encointer_set_fee_conversion_factor(who, fee_conversion_factor) => {
+				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+				debug!(
+					"encointer_set_fee_conversion_factor({}, {})",
+					account_id_to_string(&who),
+					fee_conversion_factor
+				);
+				ita_sgx_runtime::EncointerBalancesCall::<Runtime>::set_fee_conversion_factor {
+					fee_conversion_factor,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Encointer Balance set fee conversion error: {:?}",
+						e.error
+					))
+				})?;
+				Ok(())
+			},
+			TrustedCall::encointer_transfer_all(from, to, community_id) => {
+				let origin = ita_sgx_runtime::Origin::signed(from.clone());
+				debug!(
+					"encointer_transfer_all({}, {}, {})",
+					account_id_to_string(&from),
+					account_id_to_string(&to),
+					community_id
+				);
+				ita_sgx_runtime::EncointerBalancesCall::<Runtime>::transfer_all {
+					dest: AccountId::from(to),
+					cid: community_id,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Encointer Balance transfer all error: {:?}",
+						e.error
+					))
+				})?;
+				Ok(())
+			},
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(from, address, value) => {
 				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);
@@ -372,6 +445,11 @@ impl ExecuteCall for TrustedCallSigned {
 			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
+			TrustedCall::encointer_balance_transfer(_, _, _, _) =>
+				debug!("No storage updates needed..."),
+			TrustedCall::encointer_set_fee_conversion_factor(_, _) =>
+				debug!("No storage updates needed..."),
+			TrustedCall::encointer_transfer_all(_, _, _) => debug!("No storage updates needed..."),
 			#[cfg(feature = "evm")]
 			_ => debug!("No storage updates needed..."),
 		};

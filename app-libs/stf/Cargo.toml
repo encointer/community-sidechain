@@ -44,8 +44,9 @@ substrate-api-client = { optional = true, git = "https://github.com/scs/substrat
 substrate-client-keystore = { optional = true, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.28" }
 
 # Encointer dependencies
-pallet-encointer-ceremonies = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "polkadot_v0.9.28" }
+encointer-primitives = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "polkadot_v0.9.28", features=["serde_derive"] }
 pallet-encointer-balances = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "polkadot_v0.9.28" }
+pallet-encointer-ceremonies = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "polkadot_v0.9.28" }
 
 [dev-dependencies]
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
@@ -94,6 +95,7 @@ std = [
     "substrate-api-client/std",
     "substrate-client-keystore",
     #encointer
+    "encointer-primitives/std",
     "pallet-encointer-balances/std",
     "pallet-encointer-ceremonies/std",
 ]
