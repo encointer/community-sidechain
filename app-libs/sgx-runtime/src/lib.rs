@@ -62,6 +62,7 @@ pub use itp_sgx_runtime_primitives::{
 	},
 };
 
+pub use encointer_balances_tx_payment::{AssetBalanceOf, AssetIdOf, BalanceToCommunityBalance};
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, parameter_types,
@@ -97,7 +98,7 @@ pub type SignedExtra = (
 	frame_system::CheckEra<Runtime>,
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
-	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+	pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this sgx-runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
@@ -311,6 +312,15 @@ impl pallet_encointer_balances::Config for Runtime {
 	type CeremonyMaster = EnsureRoot<AccountId>;
 }
 
+impl pallet_asset_tx_payment::Config for Runtime {
+	type Event = Event;
+	type Fungibles = pallet_encointer_balances::Pallet<Runtime>;
+	type OnChargeAssetTransaction = pallet_asset_tx_payment::FungiblesAdapter<
+		encointer_balances_tx_payment::BalanceToCommunityBalance<Runtime>,
+		encointer_balances_tx_payment::BurnCredit,
+	>;
+}
+
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
@@ -324,6 +334,7 @@ construct_runtime!(
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
+		AssetTxPayment: pallet_asset_tx_payment::{Pallet, Storage, Event<T>},
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Parentchain: pallet_parentchain::{Pallet, Call, Storage},
 		EncointerScheduler: pallet_encointer_scheduler::{Pallet, Call, Storage, Config<T>, Event},
