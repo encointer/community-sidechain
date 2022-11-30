@@ -1,7 +1,7 @@
 //todo: add license
 
 use crate::{
-	ceremonies::commands::ceremonies_command_utils::prove_attendance,
+	ceremonies::commands::ceremonies_command_utils::{get_geo_hash_from_str, prove_attendance},
 	command_utils::get_chain_api,
 	get_layer_two_nonce,
 	trusted_command_utils::{get_accountid_from_str, get_identifiers, get_pair_from_str},
@@ -11,7 +11,9 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use encointer_primitives::{
-	ceremonies::ProofOfAttendance, communities::CommunityIdentifier, scheduler::CeremonyIndexType,
+	ceremonies::ProofOfAttendance,
+	communities::{CommunityIdentifier, GeoHash},
+	scheduler::CeremonyIndexType,
 };
 use ita_stf::{AccountId, Index, KeyPair, Signature, TrustedCall, TrustedGetter, TrustedOperation};
 use itp_node_api::api_client::{encointer::EncointerApi, ParentchainApi};
@@ -25,6 +27,9 @@ pub struct UpgradeRegistrationCommand {
 	/// Participant : sender's on-chain AccountId in ss58check format.
 	who: String,
 
+	/// Geo hash of the community
+	geo_hash: String,
+
 	/// Prove attendance reputation for last ceremony
 	reputation: Option<String>,
 }
@@ -37,9 +42,12 @@ impl UpgradeRegistrationCommand {
 		let accountid = get_accountid_from_str(&self.who);
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let cid = api.get_community_identifier(shard, None).unwrap().unwrap();
 
-		//TODO: check proof -> in args?
+		let geo_hash = get_geo_hash_from_str(&self.geo_hash);
+
+		let cid = api.get_community_identifier(geo_hash, None);
+		println!("community identifier {:?}", cid);
+
 		let proof = match &self.reputation {
 			Some(r) => {
 				let ceremony_index = api.get_current_ceremony_index(None).unwrap().unwrap();
@@ -47,12 +55,12 @@ impl UpgradeRegistrationCommand {
 				Some(prove_attendance(&accountid, cid, ceremony_index - 1, &who))
 			},
 			None => {
-				error!("Can't upgrade the registration Missing");
+				error!("Can't upgrade the registration: No reputaion!!");
 				None
 			},
 		};
 
-		info!("reputation: {:?}", proof);
+		//info!("reputation: {:?}", proof.unwrap());
 		let nonce = get_layer_two_nonce!(who, cli, trusted_args);
 		let top =
 			TrustedCall::ceremonies_upgrade_registration(who.public().into(), cid, proof.unwrap())

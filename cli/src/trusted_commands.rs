@@ -15,7 +15,7 @@
 
 */
 
-use crate::{benchmark::BenchmarkCommands, Cli};
+use crate::{benchmark::BenchmarkCommands, ceremonies::CeremoniesCommands, Cli};
 
 #[cfg(feature = "evm")]
 use crate::evm::EvmCommands;
@@ -48,6 +48,9 @@ pub enum TrustedCommands {
 	#[clap(flatten)]
 	BaseTrusted(TrustedBaseCli),
 
+	#[clap(flatten)]
+	CeremoniesCommands(CeremoniesCommands),
+
 	#[cfg(feature = "evm")]
 	#[clap(flatten)]
 	EvmCommands(EvmCommands),
@@ -61,6 +64,8 @@ impl TrustedArgs {
 		match &self.command {
 			TrustedCommands::BaseTrusted(cmd) => cmd.run(cli, self),
 			TrustedCommands::Benchmark(benchmark_commands) => benchmark_commands.run(cli, self),
+			TrustedCommands::CeremoniesCommands(ceremonies_commands) =>
+				ceremonies_commands.run(cli, self),
 			#[cfg(feature = "evm")]
 			TrustedCommands::EvmCommands(evm_commands) => evm_commands.run(cli, self),
 		}

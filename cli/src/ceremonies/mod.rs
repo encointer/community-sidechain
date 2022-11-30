@@ -11,11 +11,10 @@ use crate::{
 
 mod commands;
 
-#[allow(clippy::enum_variant_names)]
-#[derive(Subcommand)]
+#[derive(Debug, clap::Subcommand)]
 pub enum CeremoniesCommands {
-	CeremoniesRegisterParticipant(RegisterParticipantCommand),
-	CeremoniesUpgradeRegistration(UpgradeRegistrationCommand),
+	RegisterParticipant(RegisterParticipantCommand),
+	UpgradeRegistration(UpgradeRegistrationCommand),
 	/*
 		CeremoniesUnregisterParticipant(),
 		CeremoniesAttestAttendees(),
@@ -36,8 +35,8 @@ pub enum CeremoniesCommands {
 impl CeremoniesCommands {
 	pub fn run(&self, cli: &Cli, trusted_args: &TrustedArgs) {
 		match self {
-			CeremoniesCommands::CeremoniesRegisterParticipant(cmd) => cmd.run(cli, trusted_args),
-			CeremoniesCommands::CeremoniesUpgradeRegistration(cmd) => cmd.run(cli, trusted_args),
+			CeremoniesCommands::RegisterParticipant(cmd) => cmd.run(cli, trusted_args),
+			CeremoniesCommands::UpgradeRegistration(cmd) => cmd.run(cli, trusted_args),
 		}
 	}
 }

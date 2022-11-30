@@ -2,7 +2,9 @@
 
 use codec::{Decode, Encode};
 use encointer_primitives::{
-	ceremonies::ProofOfAttendance, communities::CommunityIdentifier, scheduler::CeremonyIndexType,
+	ceremonies::ProofOfAttendance,
+	communities::{CommunityIdentifier, GeoHash},
+	scheduler::CeremonyIndexType,
 };
 use ita_stf::{AccountId, Signature};
 use log::*;
@@ -26,4 +28,8 @@ pub fn prove_attendance(
 			attendee.sign(&msg.encode()),
 		)),
 	}
+}
+
+pub fn get_geo_hash_from_str(geo_hash: &str) -> GeoHash {
+	GeoHash::try_from(geo_hash).unwrap()
 }
