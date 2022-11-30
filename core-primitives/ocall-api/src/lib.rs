@@ -91,11 +91,17 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 		header: &H,
 	) -> Result<StorageEntryVerified<V>>;
 
-	fn get_multiple_storages_verified<H: Header<Hash = H256>, V: Decode>(
+	fn get_multiple_storages_verified_and_decoded<H: Header<Hash = H256>, V: Decode>(
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
 		header: &H,
 	) -> Result<Vec<StorageEntryVerified<V>>>;
+
+	fn get_multiple_storages_verified<H: Header<Hash = H256>>(
+		&self,
+		storage_hashes: Vec<Vec<u8>>,
+		header: &H,
+	) -> Result<Vec<StorageEntryVerified<Vec<u8>>>>;
 }
 
 /// Trait for sending metric updates.

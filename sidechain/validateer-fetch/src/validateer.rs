@@ -46,7 +46,7 @@ impl<OnchainStorage: EnclaveOnChainOCallApi> ValidateerFetch for OnchainStorage 
 		}
 
 		let enclaves: Vec<Enclave> = self
-			.get_multiple_storages_verified(hashes, header)?
+			.get_multiple_storages_verified_and_decoded(hashes, header)?
 			.into_iter()
 			.filter_map(|e| e.into_tuple().1)
 			.collect();

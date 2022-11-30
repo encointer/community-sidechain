@@ -5,7 +5,7 @@ use encointer_primitives::{
 	communities::{CommunityIdentifier, GeoHash},
 	scheduler::CeremonyIndexType,
 };
-use itp_types::ShardIdentifier;
+use itp_types::{AccountId, ShardIdentifier};
 use sp_core::{Pair, H256 as Hash};
 use sp_runtime::MultiSignature;
 use substrate_api_client::{Api, ExtrinsicParams, RpcClient};
@@ -15,6 +15,12 @@ pub const COMMUNITIES: &str = "EncointerCommunities";
 
 /// ApiClient extension that contains some convenience specific methods for encointer.
 pub trait EncointerApi {
+	fn get_bootstrappers(
+		&self,
+		community_id: CommunityIdentifier,
+		at_block: Option<Hash>,
+	) -> Vec<AccountId>;
+	fn get_community_identifiers(&self, at_block: Option<Hash>) -> Vec<CommunityIdentifier>;
 	fn get_community_identifier(
 		&self,
 		geo_hash: GeoHash,
@@ -31,6 +37,26 @@ impl<P: Pair, Client: RpcClient, Params: ExtrinsicParams> EncointerApi for Api<P
 where
 	MultiSignature: From<P::Signature>,
 {
+	fn get_bootstrappers(
+		&self,
+		community_id: CommunityIdentifier,
+		at_block: Option<Hash>,
+	) -> Vec<AccountId> {
+		let result: Vec<AccountId> = self
+			.get_storage_map(COMMUNITIES, "Bootstrappers", community_id, at_block)
+			.unwrap()
+			.unwrap();
+		result
+	}
+
+	fn get_community_identifiers(&self, at_block: Option<Hash>) -> Vec<CommunityIdentifier> {
+		let cids: Vec<CommunityIdentifier> = self
+			.get_storage_value(COMMUNITIES, "CommunityIdentifiers", at_block)
+			.unwrap()
+			.expect("no community registered");
+		cids
+	}
+
 	fn get_community_identifier(
 		&self,
 		geo_hash: GeoHash,

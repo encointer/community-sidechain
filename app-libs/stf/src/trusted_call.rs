@@ -818,6 +818,7 @@ impl ExecuteCall for TrustedCallSigned {
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
 				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
+				key_hashes.push(storage_value_key("EncointerCommunities", "Bootstrappers"));
 			},
 			//get_aggregated_account_data ?
 			TrustedCall::ceremonies_attest_attendees(_, _, _, _) => {

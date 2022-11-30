@@ -20,6 +20,7 @@ use itp_node_api::api_client::{encointer::EncointerApi, ParentchainApi};
 use log::*;
 use sp_application_crypto::sr25519;
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
+use std::str::FromStr;
 
 ///Register participant for next encointer ceremony
 #[derive(Debug, Clone, Parser)]
@@ -28,7 +29,7 @@ pub struct RegisterParticipantCommand {
 	who: String,
 
 	/// Geo hash of the community
-	geo_hash: String,
+	community_id: String,
 
 	/// Prove attendance reputation for last ceremony
 	reputation: Option<String>,
@@ -44,11 +45,12 @@ impl RegisterParticipantCommand {
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
 
-		println!("geo_hash {}", self.geo_hash);
-		let geo_hash = get_geo_hash_from_str(&self.geo_hash);
-		let cid = api.get_community_identifier(geo_hash, None);
-		println!("community identifier {}", cid);
-
+		println!("community_id {}", self.community_id);
+		let cids = api.get_community_identifiers(None);
+		for i in cids {
+			println!("community identifier {}", i);
+		}
+		let cid = CommunityIdentifier::from_str(&self.community_id).unwrap();
 		let proof = match &self.reputation {
 			Some(r) => {
 				let ceremony_index = api.get_current_ceremony_index(None).unwrap().unwrap();
@@ -60,7 +62,7 @@ impl RegisterParticipantCommand {
 
 		println!("reputation: {:?}", proof);
 		let nonce = get_layer_two_nonce!(who, cli, trusted_args);
-		let top = TrustedCall::ceremonies_register_participant(who.public().into(), cid, proof)
+		let top = TrustedCall::ceremonies_register_participant(who.public().into(), cid, None)
 			.sign(&KeyPair::Sr25519(who), nonce, &mrenclave, &shard)
 			.into_trusted_operation(trusted_args.direct);
 
