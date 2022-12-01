@@ -105,7 +105,7 @@ sgx_urts = { version = "1.1.5", git = "https://github.com/apache/incubator-teacl
 #http_req = {path = '..//http_req' }
 
 [patch."https://github.com/encointer/encointer-node.git"]
-my-node-runtime = { package = "encointer-node-notee-runtime", path = "../encointer-node/runtime"}
+my-node-runtime = { package = "encointer-node-notee-runtime", path = "../encointer-node/runtime" }
 
 #[patch."https://github.com/encointer/pallets.git"]
 #encointer-primitives = { path = "../pallets/primitives" }

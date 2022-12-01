@@ -10,7 +10,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive
 thiserror = { version = "1.0" }
 
 # encointer
-encointer-primitives = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "master", features=["serde_derive"] }
+encointer-primitives = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "master", features = ["serde_derive"] }
 
 # substrate
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
