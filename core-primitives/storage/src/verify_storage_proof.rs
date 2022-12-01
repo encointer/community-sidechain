@@ -1,6 +1,6 @@
 use crate::{error::Error, StorageProofChecker};
 use codec::Decode;
-use frame_support::{ensure, log::*};
+use frame_support::ensure;
 use itp_types::storage::{StorageEntry, StorageEntryVerified};
 use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::Vec;

@@ -5,7 +5,7 @@ use encointer_primitives::{
 	communities::{CommunityIdentifier, GeoHash},
 	scheduler::CeremonyIndexType,
 };
-use itp_types::{AccountId, ShardIdentifier};
+use itp_types::AccountId;
 use sp_core::{Pair, H256 as Hash};
 use sp_runtime::MultiSignature;
 use substrate_api_client::{Api, ExtrinsicParams, RpcClient};

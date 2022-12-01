@@ -29,8 +29,8 @@ use codec::{Decode, Encode};
 use encointer_primitives::{
 	balances::{BalanceType, FeeConversionFactorType},
 	ceremonies::{
-		ClaimOfAttendance, CommunityCeremony, EndorsementTicketsType, InactivityTimeoutType,
-		MeetupIndexType, MeetupTimeOffsetType, ProofOfAttendance, ReputationLifetimeType,
+		CommunityCeremony, EndorsementTicketsType, InactivityTimeoutType, MeetupIndexType,
+		MeetupTimeOffsetType, ProofOfAttendance, ReputationLifetimeType,
 	},
 	communities::CommunityIdentifier,
 	scheduler::CeremonyPhaseType,
