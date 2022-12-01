@@ -1229,6 +1229,7 @@ dependencies = [
 [[package]]
 name = "encointer-node-notee-runtime"
 version = "1.3.22"
+source = "git+https://github.com/encointer/encointer-node.git?branch=ec/cantillon_test_node#05366ae97d2e782cc56da81b94532452e0ce2279"
 dependencies = [
  "encointer-balances-tx-payment",
  "encointer-balances-tx-payment-rpc-runtime-api",
