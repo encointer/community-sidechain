@@ -18,12 +18,10 @@ pub fn prove_attendance(
 	debug!("generating proof of attendance for {} and cindex: {}", prover, cindex);
 	debug!("signature payload is {:x?}", msg.encode());
 	ProofOfAttendance {
-		prover_public: AccountId::from(prover.clone()),
+		prover_public: prover.clone(),
 		ceremony_index: cindex,
 		community_identifier: cid,
-		attendee_public: AccountId::from(sr25519_core::Public::from(attendee.public())),
-		attendee_signature: Signature::from(sr25519_core::Signature::from(
-			attendee.sign(&msg.encode()),
-		)),
+		attendee_public: AccountId::from(attendee.public()),
+		attendee_signature: Signature::from(attendee.sign(&msg.encode())),
 	}
 }
