@@ -309,7 +309,7 @@ impl ExecuteCall for TrustedCallSigned {
 					value
 				);
 				ita_sgx_runtime::EncointerBalancesCall::<Runtime>::transfer {
-					dest: AccountId::from(to),
+					dest: to,
 					community_id,
 					amount: value,
 				}
@@ -350,7 +350,7 @@ impl ExecuteCall for TrustedCallSigned {
 					community_id
 				);
 				ita_sgx_runtime::EncointerBalancesCall::<Runtime>::transfer_all {
-					dest: AccountId::from(to),
+					dest: to,
 					cid: community_id,
 				}
 				.dispatch_bypass_filter(origin)
@@ -363,7 +363,7 @@ impl ExecuteCall for TrustedCallSigned {
 				Ok(())
 			},
 			TrustedCall::ceremonies_register_participant(who, cid, proof) => {
-				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+				let origin = ita_sgx_runtime::Origin::signed(who);
 
 				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
 					== CeremonyPhaseType::Assigning
@@ -388,7 +388,7 @@ impl ExecuteCall for TrustedCallSigned {
 				Ok(())
 			},
 			TrustedCall::ceremonies_upgrade_registration(who, cid, proof) => {
-				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+				let origin = ita_sgx_runtime::Origin::signed(who);
 
 				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
 					== CeremonyPhaseType::Assigning
@@ -401,7 +401,7 @@ impl ExecuteCall for TrustedCallSigned {
 
 				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::upgrade_registration {
 					cid,
-					proof: proof.clone(),
+					proof,
 				}
 				.dispatch_bypass_filter(origin)
 				.map_err(|e| {
@@ -417,7 +417,7 @@ impl ExecuteCall for TrustedCallSigned {
 				cid,
 				maybe_reputation_community_ceremony,
 			) => {
-				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+				let origin = ita_sgx_runtime::Origin::signed(who);
 
 				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
 					== CeremonyPhaseType::Assigning
@@ -447,7 +447,7 @@ impl ExecuteCall for TrustedCallSigned {
 				number_of_participants_vote,
 				attestations,
 			) => {
-				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+				let origin = ita_sgx_runtime::Origin::signed(who);
 
 				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
 					!= CeremonyPhaseType::Attesting
@@ -472,7 +472,7 @@ impl ExecuteCall for TrustedCallSigned {
 				Ok(())
 			},
 			TrustedCall::ceremonies_endorse_newcomer(who, cid, newbie) => {
-				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+				let origin = ita_sgx_runtime::Origin::signed(who);
 
 				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::endorse_newcomer {
 					cid,
@@ -488,7 +488,7 @@ impl ExecuteCall for TrustedCallSigned {
 				Ok(())
 			},
 			TrustedCall::ceremonies_claim_rewards(who, cid, maybe_meetup_index) => {
-				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+				let origin = ita_sgx_runtime::Origin::signed(who);
 
 				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
 					== CeremonyPhaseType::Assigning
@@ -510,7 +510,7 @@ impl ExecuteCall for TrustedCallSigned {
 			},
 			TrustedCall::ceremonies_set_inactivity_timeout(who, inactivity_timeout) => {
 				//Master check
-				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+				let origin = ita_sgx_runtime::Origin::signed(who);
 
 				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::set_inactivity_timeout {
 					inactivity_timeout,
@@ -529,7 +529,7 @@ impl ExecuteCall for TrustedCallSigned {
 				endorsement_tickets_per_bootstrapper,
 			) => {
 				//Master check
-				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+				let origin = ita_sgx_runtime::Origin::signed(who);
 
 				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::set_endorsement_tickets_per_bootstrapper {
 					endorsement_tickets_per_bootstrapper,
@@ -548,7 +548,7 @@ impl ExecuteCall for TrustedCallSigned {
 				endorsement_tickets_per_reputable,
 			) => {
 				//Master check
-				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+				let origin = ita_sgx_runtime::Origin::signed(who);
 
 				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::set_endorsement_tickets_per_reputable {
 					endorsement_tickets_per_reputable,
@@ -564,7 +564,7 @@ impl ExecuteCall for TrustedCallSigned {
 			},
 			TrustedCall::ceremonies_set_reputation_lifetime(who, reputation_lifetime) => {
 				//Master check
-				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+				let origin = ita_sgx_runtime::Origin::signed(who);
 
 				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::set_reputation_lifetime {
 					reputation_lifetime,
@@ -580,7 +580,7 @@ impl ExecuteCall for TrustedCallSigned {
 			},
 			TrustedCall::ceremonies_set_meetup_time_offset(who, meetup_time_offset) => {
 				//Check Master
-				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+				let origin = ita_sgx_runtime::Origin::signed(who);
 
 				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
 					== CeremonyPhaseType::Registering
@@ -605,7 +605,7 @@ impl ExecuteCall for TrustedCallSigned {
 			},
 			TrustedCall::ceremonies_set_time_tolerance(who, time_tolerance) => {
 				//Master check
-				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+				let origin = ita_sgx_runtime::Origin::signed(who);
 
 				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::set_time_tolerance {
 					time_tolerance,
@@ -621,7 +621,7 @@ impl ExecuteCall for TrustedCallSigned {
 			},
 			TrustedCall::ceremonies_set_location_tolerance(who, location_tolerance) => {
 				//Master check
-				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+				let origin = ita_sgx_runtime::Origin::signed(who);
 
 				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::set_location_tolerance {
 					location_tolerance,
@@ -637,7 +637,7 @@ impl ExecuteCall for TrustedCallSigned {
 			},
 			TrustedCall::ceremonies_purge_community_ceremony(who, community_ceremony) => {
 				//Master check
-				let origin = ita_sgx_runtime::Origin::signed(who.clone());
+				let origin = ita_sgx_runtime::Origin::signed(who);
 
 				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::purge_community_ceremony {
 					community_ceremony,
