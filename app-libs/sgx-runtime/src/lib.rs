@@ -359,8 +359,14 @@ construct_runtime!(
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
+		AssetTxPayment: pallet_asset_tx_payment::{Pallet, Storage, Event<T>},
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Parentchain: pallet_parentchain::{Pallet, Call, Storage},
+
+		EncointerScheduler: pallet_encointer_scheduler::{Pallet, Call, Storage, Config<T>, Event},
+		EncointerCeremonies: pallet_encointer_ceremonies::{Pallet, Call, Storage, Config<T>, Event<T>},
+		EncointerBalances: pallet_encointer_balances::{Pallet, Call, Storage, Config, Event<T>},
+		EncointerCommunities: pallet_encointer_communities::{Pallet, Call, Storage, Config, Event<T>},
 
 		Evm: pallet_evm::{Pallet, Call, Storage, Config, Event<T>},
 	}
