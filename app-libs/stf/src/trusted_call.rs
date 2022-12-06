@@ -33,13 +33,13 @@ use encointer_primitives::{
 		MeetupTimeOffsetType, ProofOfAttendance, ReputationLifetimeType,
 	},
 	communities::CommunityIdentifier,
-	scheduler::CeremonyPhaseType,
+	scheduler::{CeremonyIndexType, CeremonyPhaseType},
 };
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
 use itp_stf_interface::ExecuteCall;
-use itp_storage::{storage_map_key, storage_value_key, StorageHasher};
+use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
 use itp_types::OpaqueCall;
 use itp_utils::stringify::account_id_to_string;
 use log::*;
@@ -74,7 +74,13 @@ pub enum TrustedCall {
 		ProofOfAttendance<Signature, AccountId>,
 	),
 	ceremonies_unregister_participant(AccountId, CommunityIdentifier, Option<CommunityCeremony>),
-	ceremonies_attest_attendees(AccountId, CommunityIdentifier, u32, Vec<AccountId>),
+	ceremonies_attest_attendees(
+		AccountId,
+		CommunityIdentifier,
+		u32,
+		CeremonyIndexType,
+		Vec<AccountId>,
+	),
 	ceremonies_endorse_newcomer(AccountId, CommunityIdentifier, AccountId),
 	ceremonies_claim_rewards(AccountId, CommunityIdentifier, Option<MeetupIndexType>),
 	ceremonies_set_inactivity_timeout(AccountId, InactivityTimeoutType),
@@ -445,6 +451,7 @@ impl ExecuteCall for TrustedCallSigned {
 				who,
 				cid,
 				number_of_participants_vote,
+				ceremony_index,
 				attestations,
 			) => {
 				let origin = ita_sgx_runtime::Origin::signed(who);
@@ -812,21 +819,33 @@ impl ExecuteCall for TrustedCallSigned {
 				debug!("No storage updates needed..."),
 			TrustedCall::ceremonies_purge_community_ceremony(_, _) =>
 				debug!("No storage updates needed..."),
-			TrustedCall::ceremonies_register_participant(_, _, _)
-			| TrustedCall::ceremonies_upgrade_registration(_, _, _)
-			| TrustedCall::ceremonies_unregister_participant(_, _, _) => {
+			TrustedCall::ceremonies_register_participant(_, cid, _)
+			| TrustedCall::ceremonies_upgrade_registration(_, cid, _)
+			| TrustedCall::ceremonies_unregister_participant(_, cid, _) => {
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
 				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
-				key_hashes.push(storage_value_key("EncointerCommunities", "Bootstrappers"));
+				key_hashes.push(storage_map_key(
+					"EncointerCommunities",
+					"Bootstrappers",
+					&cid,
+					&StorageHasher::Blake2_128Concat,
+				));
 			},
 			//get_aggregated_account_data ?
-			TrustedCall::ceremonies_attest_attendees(_, _, _, _) => {
+			TrustedCall::ceremonies_attest_attendees(_, cid, _, ceremony_index, _) => {
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
 				key_hashes.push(storage_value_key("EncointerScheduler", "PhaseDurations"));
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
 				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
-				key_hashes.push(storage_value_key("EncointerCommunities", "Locations"));
+				key_hashes.push(storage_double_map_key(
+					"EncointerCommunities",
+					"Locations",
+					&cid,
+					&StorageHasher::Blake2_128Concat,
+					&ceremony_index,
+					&StorageHasher::Identity,
+				));
 			},
 			TrustedCall::ceremonies_claim_rewards(_, cid, _) => {
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
@@ -842,11 +861,16 @@ impl ExecuteCall for TrustedCallSigned {
 			TrustedCall::ceremonies_set_meetup_time_offset(_, _) => {
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
 			},
-			TrustedCall::ceremonies_endorse_newcomer(_, _, _) => {
+			TrustedCall::ceremonies_endorse_newcomer(_, cid, _) => {
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
 				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
-				key_hashes.push(storage_value_key("EncointerCommunities", "Bootstrappers"));
+				key_hashes.push(storage_map_key(
+					"EncointerCommunities",
+					"Bootstrappers",
+					&cid,
+					&StorageHasher::Blake2_128Concat,
+				));
 			},
 			#[cfg(feature = "evm")]
 			_ => debug!("No storage updates needed..."),
