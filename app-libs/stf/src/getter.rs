@@ -182,9 +182,7 @@ impl ExecuteGetter for Getter {
 				TrustedGetter::encointer_balance(who, currency_id) => {
 					let balance: BalanceEntry<BlockNumber> = pallet_encointer_balances::Pallet::<
 						ita_sgx_runtime::Runtime,
-					>::balance_entry(
-						currency_id, AccountId::from(who)
-					);
+					>::balance_entry(currency_id, who);
 					debug!("TrustedGetter encointer_balance");
 					Some(balance.encode())
 				},
@@ -209,7 +207,7 @@ impl ExecuteGetter for Getter {
 					let attestation_index = pallet_encointer_ceremonies::Pallet::<
 						ita_sgx_runtime::Runtime,
 					>::attestation_index(
-						(community_id, ceremony_index), AccountId::from(who)
+						(community_id, ceremony_index), who
 					);
 					let attestations = pallet_encointer_ceremonies::Pallet::<
 						ita_sgx_runtime::Runtime,
@@ -221,13 +219,8 @@ impl ExecuteGetter for Getter {
 				TrustedGetter::ceremonies_aggregated_account_data(who, community_id) => {
 					let aggregated_account_data = pallet_encointer_ceremonies::Pallet::<
 						ita_sgx_runtime::Runtime,
-					>::get_aggregated_account_data(
-						community_id, &AccountId::from(who)
-					);
-					match aggregated_account_data.personal {
-						Some(p) => (Some(p.encode())),
-						_ => None,
-					}
+					>::get_aggregated_account_data(community_id, &who);
+					aggregated_account_data.personal.map(|p| p.encode())
 				},
 				TrustedGetter::ceremonies_registered_bootstrappers(
 					who,
