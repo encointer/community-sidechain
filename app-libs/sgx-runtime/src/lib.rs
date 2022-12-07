@@ -41,14 +41,14 @@ pub use evm::{
 use core::convert::{TryFrom, TryInto};
 use encointer_primitives::balances::{BalanceType, Demurrage};
 use frame_support::weights::ConstantMultiplier;
-use frame_system::{EnsureRoot, EnsureSigned};
+use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
 use pallet_transaction_payment::CurrencyAdapter;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 use sp_runtime::{
 	create_runtime_str, generic,
 	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Verify},
-	MultiSignature,
+	AccountId32, MultiSignature,
 };
 use sp_std::prelude::*;
 use sp_version::RuntimeVersion;
@@ -65,8 +65,8 @@ pub use itp_sgx_runtime_primitives::{
 pub use encointer_balances_tx_payment::{AssetBalanceOf, AssetIdOf, BalanceToCommunityBalance};
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-	construct_runtime, parameter_types,
-	traits::{KeyOwnerProofSystem, Randomness},
+	construct_runtime, ord_parameter_types, parameter_types,
+	traits::{EitherOfDiverse, KeyOwnerProofSystem, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		IdentityFee, Weight,
@@ -275,24 +275,33 @@ parameter_types! {
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
+//Hack to have the same masters on-chain and in the sidechain. In the sidechain, root can be the enclave.
+ord_parameter_types! {
+	pub const Alice: AccountId32 = AccountId32::new([212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133, 76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125]);
+}
+/// Hard coded origin for the pallet's `EnsureOrigin` associated type.
+/// Root or Alice (root in encointer node)
+pub type EnsureAliceOrRoot =
+	EitherOfDiverse<EnsureSignedBy<Alice, AccountId32>, EnsureRoot<AccountId>>;
+
 impl pallet_encointer_scheduler::Config for Runtime {
 	type Event = Event;
 	type OnCeremonyPhaseChange = pallet_encointer_ceremonies::Pallet<Runtime>;
 	type MomentsPerDay = MomentsPerDay;
-	type CeremonyMaster = EnsureRoot<AccountId>;
+	type CeremonyMaster = EnsureAliceOrRoot;
 	type WeightInfo = ();
 }
 
 impl pallet_encointer_communities::Config for Runtime {
 	type Event = Event;
-	type CommunityMaster = EnsureRoot<AccountId>;
+	type CommunityMaster = EnsureAliceOrRoot;
 	type TrustableForNonDestructiveAction = EnsureSigned<AccountId>;
 	type WeightInfo = ();
 }
 
 impl pallet_encointer_ceremonies::Config for Runtime {
 	type Event = Event;
-	type CeremonyMaster = EnsureRoot<AccountId>;
+	type CeremonyMaster = EnsureAliceOrRoot;
 	type Public = <MultiSignature as Verify>::Signer;
 	type Signature = MultiSignature;
 	// Note: in production networks it is advised to use babes randomness source.
@@ -309,7 +318,7 @@ impl pallet_encointer_balances::Config for Runtime {
 	type DefaultDemurrage = DefaultDemurrage;
 	type ExistentialDeposit = EncointerExistentialDeposit;
 	type WeightInfo = ();
-	type CeremonyMaster = EnsureRoot<AccountId>;
+	type CeremonyMaster = EnsureAliceOrRoot;
 }
 
 impl pallet_asset_tx_payment::Config for Runtime {
