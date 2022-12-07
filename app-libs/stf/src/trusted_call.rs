@@ -1,5 +1,5 @@
 /*
-	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright 2022 Encointer Association, Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -451,7 +451,7 @@ impl ExecuteCall for TrustedCallSigned {
 				who,
 				cid,
 				number_of_participants_vote,
-				ceremony_index,
+				_ceremony_index,
 				attestations,
 			) => {
 				let origin = ita_sgx_runtime::Origin::signed(who);
@@ -828,6 +828,12 @@ impl ExecuteCall for TrustedCallSigned {
 				key_hashes.push(storage_map_key(
 					"EncointerCommunities",
 					"Bootstrappers",
+					&cid,
+					&StorageHasher::Blake2_128Concat,
+				));
+				key_hashes.push(storage_map_key(
+					"EncointerBalances",
+					"TotalIssuance",
 					&cid,
 					&StorageHasher::Blake2_128Concat,
 				));

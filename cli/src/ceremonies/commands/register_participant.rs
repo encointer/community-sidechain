@@ -1,4 +1,19 @@
-//todo: add license
+/*
+	Copyright 2022 Encointer Association
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
 
 use crate::{
 	ceremonies::commands::ceremonies_command_utils::prove_attendance,
@@ -36,16 +51,14 @@ impl RegisterParticipantCommand {
 
 		let who = get_pair_from_str(trusted_args, &self.who);
 		let accountid = get_accountid_from_str(&self.who);
-		println!("from ss58 is {}", who.public().to_ss58check());
+		debug!("from ss58 is public {}", who.public().to_ss58check());
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
 
-		println!("community_id {}", self.community_id);
-		let cids = api.get_community_identifiers(None);
-		for i in cids {
-			println!("community identifier {}", i);
-		}
+		debug!("community_id {}", self.community_id);
+
 		let cid = CommunityIdentifier::from_str(&self.community_id).unwrap();
+
 		let proof = match &self.reputation {
 			Some(_r) => {
 				let ceremony_index = api.get_current_ceremony_index(None).unwrap().unwrap();
@@ -55,13 +68,13 @@ impl RegisterParticipantCommand {
 			None => None,
 		};
 
-		println!("reputation: {:?}", proof);
+		debug!("reputation: {:?}", proof);
 		let nonce = get_layer_two_nonce!(who, cli, trusted_args);
 		let top = TrustedCall::ceremonies_register_participant(who.public().into(), cid, None)
 			.sign(&KeyPair::Sr25519(who), nonce, &mrenclave, &shard)
 			.into_trusted_operation(trusted_args.direct);
 
 		let _ = perform_trusted_operation(cli, trusted_args, &top);
-		println!("trusted call ceremonies_register_participant executed");
+		debug!("trusted call ceremonies_register_participant executed");
 	}
 }

@@ -41,6 +41,7 @@ pub use getter::*;
 pub use stf_sgx_primitives::{types::*, Stf};
 pub use trusted_call::*;
 
+pub mod encointer_helpers;
 #[cfg(feature = "evm")]
 pub mod evm_helpers;
 pub mod getter;
