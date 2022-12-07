@@ -85,13 +85,13 @@ impl ListParticipantsCommand {
 		println!("Ceremony ({}) participants of community {} :", ceremony_index, self.community_id);
 		println!("- Bootstrappers :");
 		list_participants(bootstrappers);
-		println!(" ");
+		println!();
 		println!("- Reputables :");
 		list_participants(reputables);
-		println!("");
+		println!();
 		println!("- Endorsees :");
 		list_participants(endorsees);
-		println!("");
+		println!();
 		println!("- Newbies :");
 		list_participants(newbies);
 	}
