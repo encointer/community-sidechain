@@ -15,10 +15,13 @@
 
 */
 
-use crate::AccountId;
+use crate::{helpers::get_storage_value, AccountId};
+use encointer_primitives::scheduler::CeremonyPhaseType;
 use frame_support::traits::EnsureOrigin;
+use itp_storage::storage_value_key;
 use itp_utils::stringify::account_id_to_string;
 use log::*;
+use std::prelude::v1::*;
 
 pub fn is_ceremony_master(account_id: AccountId) -> bool {
 	let origin = ita_sgx_runtime::Origin::signed(account_id.clone());
@@ -31,4 +34,12 @@ pub fn is_ceremony_master(account_id: AccountId) -> bool {
             false
         }
     }
+}
+
+pub fn current_ceremony_phase_storage_key() -> Vec<u8> {
+	storage_value_key("EncointerScheduler", "CurrentPhase")
+}
+
+pub fn current_ceremony_phase() -> Option<CeremonyPhaseType> {
+	get_storage_value("EncointerScheduler", "CurrentPhase")
 }

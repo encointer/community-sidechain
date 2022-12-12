@@ -22,6 +22,7 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use ita_stf::{
+	encointer_helpers::current_ceremony_phase_storage_key,
 	hash::{Hash, TrustedOperationOrHash},
 	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
 	ParentchainHeader, ShardIdentifier, TrustedCallSigned, TrustedOperation,
@@ -30,6 +31,7 @@ use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessN
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_interface::{
+	encointer_scheduler_pallet::EncointerSchedulerPalletInterface,
 	parentchain_pallet::ParentchainPalletInterface, ExecuteCall, StateCallInterface, UpdateState,
 };
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
@@ -159,7 +161,8 @@ where
 	Stf: UpdateState<
 			StateHandler::StateT,
 			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
-		> + ParentchainPalletInterface<StateHandler::StateT, ParentchainHeader>,
+		> + ParentchainPalletInterface<StateHandler::StateT, ParentchainHeader>
+		+ EncointerSchedulerPalletInterface<StateHandler::StateT>,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
 	<Stf as ParentchainPalletInterface<StateHandler::StateT, ParentchainHeader>>::Error: Debug,
@@ -186,10 +189,24 @@ where
 			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;
 			match Stf::update_parentchain_block(&mut state, header.clone()) {
 				Ok(_) => {
-					self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
+					//self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
 				},
 				Err(e) => error!("Could not update parentchain block. {:?}: {:?}", shard_id, e),
 			}
+
+			if let Some(maybe_next_ceremony_phase) =
+				state_diff_update.get(&current_ceremony_phase_storage_key())
+			{
+				match maybe_next_ceremony_phase {
+					Some(encoded_next_ceremony_phase) => {
+						Stf::update_ceremony_phase(&mut state, encoded_next_ceremony_phase);
+					},
+					_ => {
+						error!("no next ceremony phase in state diff !")
+					},
+				};
+			}
+			self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
 		}
 
 		// look for new shards an initialize them

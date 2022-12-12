@@ -18,11 +18,17 @@
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
 
-use crate::{helpers::enclave_signer_account, ShardIdentifier, Stf, StfError, ENCLAVE_ACCOUNT_KEY};
-use codec::Encode;
+use crate::{
+	encointer_helpers::{current_ceremony_phase, current_ceremony_phase_storage_key},
+	helpers::enclave_signer_account,
+	ShardIdentifier, Stf, StfError, ENCLAVE_ACCOUNT_KEY,
+};
+use codec::{Decode, Encode};
+use encointer_primitives::scheduler::CeremonyPhaseType;
 use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::{
+	encointer_scheduler_pallet::EncointerSchedulerPalletInterface,
 	parentchain_pallet::ParentchainPalletInterface,
 	sudo_pallet::SudoPalletInterface,
 	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
@@ -32,6 +38,7 @@ use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
 use itp_utils::stringify::account_id_to_string;
 use log::*;
+use pallet_encointer_scheduler::OnCeremonyPhaseChange;
 use sp_runtime::traits::StaticLookup;
 use std::{fmt::Debug, format, prelude::v1::*, vec};
 
@@ -114,7 +121,7 @@ where
 
 	fn storage_hashes_to_update_on_block() -> Vec<Vec<u8>> {
 		// Get all shards that are currently registered.
-		vec![shards_key_hash()]
+		vec![shards_key_hash(), current_ceremony_phase_storage_key()]
 	}
 }
 
@@ -237,6 +244,43 @@ where
 				})
 		})?;
 		Ok(())
+	}
+}
+
+impl<Call, Getter, State, Runtime> EncointerSchedulerPalletInterface<State>
+	for Stf<Call, Getter, State, Runtime>
+where
+	State: SgxExternalitiesTrait,
+	Runtime: frame_system::Config
+		+ pallet_encointer_scheduler::Config
+		+ pallet_encointer_ceremonies::Config,
+{
+	fn update_ceremony_phase(state: &mut State, next_ceremony_phase: &Vec<u8>) {
+		state.execute_with(|| {
+			let current_ceremony_phase = current_ceremony_phase();
+			match CeremonyPhaseType::decode(&mut next_ceremony_phase.as_slice()) {
+				Ok(decoded_next_ceremony_phase) => {
+					if current_ceremony_phase.is_none()
+						|| decoded_next_ceremony_phase != current_ceremony_phase.unwrap()
+					{
+						debug!(
+							"Current ceremony phase has changed: Phase is now {:?}",
+							next_ceremony_phase
+						);
+						sp_io::storage::set(
+							&current_ceremony_phase_storage_key(),
+							next_ceremony_phase,
+						);
+						pallet_encointer_ceremonies::Pallet::<Runtime>::on_ceremony_phase_change(
+							decoded_next_ceremony_phase,
+						);
+					}
+				},
+				_ => {
+					error!("update_ceremony_phase: Cannot decode next ceremony phase");
+				},
+			}
+		});
 	}
 }
 
