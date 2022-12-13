@@ -91,6 +91,8 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "frame-system-rpc-runtime-api/std",
+    "encointer-balances-tx-payment/std",
+    "pallet-asset-tx-payment/std",
     "pallet-aura/std",
     "pallet-balances/std",
     "pallet-encointer-balances/std",
