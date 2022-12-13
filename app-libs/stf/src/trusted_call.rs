@@ -22,24 +22,18 @@ use sp_core::{H160, H256, U256};
 use std::vec::Vec;
 
 use crate::{
-	helpers::ensure_enclave_signer_account, AccountId, KeyPair, Moment, ShardIdentifier, Signature,
+	helpers::ensure_enclave_signer_account, AccountId, KeyPair, ShardIdentifier, Signature,
 	StfError, TrustedOperation,
 };
 use codec::{Decode, Encode};
 use encointer_primitives::{
-	balances::{BalanceType, FeeConversionFactorType},
-	ceremonies::{
-		CommunityCeremony, EndorsementTicketsType, InactivityTimeoutType, MeetupIndexType,
-		MeetupTimeOffsetType, ProofOfAttendance, ReputationLifetimeType,
-	},
-	communities::CommunityIdentifier,
-	scheduler::{CeremonyIndexType, CeremonyPhaseType},
+	ceremonies::ProofOfAttendance, communities::CommunityIdentifier, scheduler::CeremonyPhaseType,
 };
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
 use itp_stf_interface::ExecuteCall;
-use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
+use itp_storage::{storage_map_key, storage_value_key, StorageHasher};
 use itp_types::OpaqueCall;
 use itp_utils::stringify::account_id_to_string;
 use log::*;
@@ -60,14 +54,17 @@ pub enum TrustedCall {
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
+	/*
 	encointer_balance_transfer(AccountId, AccountId, CommunityIdentifier, BalanceType),
 	encointer_set_fee_conversion_factor(AccountId, FeeConversionFactorType),
 	encointer_transfer_all(AccountId, AccountId, CommunityIdentifier),
+	*/
 	ceremonies_register_participant(
 		AccountId,
 		CommunityIdentifier,
 		Option<ProofOfAttendance<Signature, AccountId>>,
 	),
+	/*
 	ceremonies_upgrade_registration(
 		AccountId,
 		CommunityIdentifier,
@@ -91,6 +88,8 @@ pub enum TrustedCall {
 	ceremonies_set_time_tolerance(AccountId, Moment),
 	ceremonies_set_location_tolerance(AccountId, u32),
 	ceremonies_purge_community_ceremony(AccountId, CommunityCeremony),
+
+	 */
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -143,10 +142,12 @@ impl TrustedCall {
 			TrustedCall::balance_transfer(sender_account, ..) => sender_account,
 			TrustedCall::balance_unshield(sender_account, ..) => sender_account,
 			TrustedCall::balance_shield(sender_account, ..) => sender_account,
-			TrustedCall::encointer_balance_transfer(sender_account, ..) => sender_account,
-			TrustedCall::encointer_set_fee_conversion_factor(sender_account, ..) => sender_account,
-			TrustedCall::encointer_transfer_all(sender_account, ..) => sender_account,
+			//TrustedCall::encointer_balance_transfer(sender_account, ..) => sender_account,
+			//TrustedCall::encointer_set_fee_conversion_factor(sender_account, ..) => sender_account,
+			//TrustedCall::encointer_transfer_all(sender_account, ..) => sender_account,
 			TrustedCall::ceremonies_register_participant(sender_account, ..) => sender_account,
+			/*
+
 			TrustedCall::ceremonies_upgrade_registration(sender_account, ..) => sender_account,
 			TrustedCall::ceremonies_unregister_participant(sender_account, ..) => sender_account,
 			TrustedCall::ceremonies_attest_attendees(sender_account, ..) => sender_account,
@@ -164,6 +165,8 @@ impl TrustedCall {
 			TrustedCall::ceremonies_set_time_tolerance(sender_account, ..) => sender_account,
 			TrustedCall::ceremonies_set_location_tolerance(sender_account, ..) => sender_account,
 			TrustedCall::ceremonies_purge_community_ceremony(sender_account, ..) => sender_account,
+
+			 */
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -305,6 +308,7 @@ impl ExecuteCall for TrustedCallSigned {
 				shield_funds(who, value)?;
 				Ok(())
 			},
+			/*
 			TrustedCall::encointer_balance_transfer(from, to, community_id, value) => {
 				let origin = ita_sgx_runtime::Origin::signed(from.clone());
 				debug!(
@@ -368,6 +372,8 @@ impl ExecuteCall for TrustedCallSigned {
 				})?;
 				Ok(())
 			},
+
+			 */
 			TrustedCall::ceremonies_register_participant(who, cid, proof) => {
 				let origin = ita_sgx_runtime::Origin::signed(who);
 
@@ -393,6 +399,7 @@ impl ExecuteCall for TrustedCallSigned {
 				})?;
 				Ok(())
 			},
+			/*
 			TrustedCall::ceremonies_upgrade_registration(who, cid, proof) => {
 				let origin = ita_sgx_runtime::Origin::signed(who);
 
@@ -658,6 +665,8 @@ impl ExecuteCall for TrustedCallSigned {
 				})?;
 				Ok(())
 			},
+
+			 */
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(from, address, value) => {
 				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);
@@ -787,6 +796,7 @@ impl ExecuteCall for TrustedCallSigned {
 			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
+			/*
 			TrustedCall::encointer_balance_transfer(_, _, cid, _) => {
 				key_hashes.push(storage_map_key(
 					"EncointerBalances",
@@ -819,9 +829,12 @@ impl ExecuteCall for TrustedCallSigned {
 				debug!("No storage updates needed..."),
 			TrustedCall::ceremonies_purge_community_ceremony(_, _) =>
 				debug!("No storage updates needed..."),
+
 			TrustedCall::ceremonies_register_participant(_, cid, _)
 			| TrustedCall::ceremonies_upgrade_registration(_, cid, _)
 			| TrustedCall::ceremonies_unregister_participant(_, cid, _) => {
+			 */
+			TrustedCall::ceremonies_register_participant(_, cid, _) => {
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
 				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
@@ -838,6 +851,7 @@ impl ExecuteCall for TrustedCallSigned {
 					&StorageHasher::Blake2_128Concat,
 				));
 			},
+			/*
 			//get_aggregated_account_data ?
 			TrustedCall::ceremonies_attest_attendees(_, cid, _, ceremony_index, _) => {
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
@@ -878,6 +892,8 @@ impl ExecuteCall for TrustedCallSigned {
 					&StorageHasher::Blake2_128Concat,
 				));
 			},
+
+			 */
 			#[cfg(feature = "evm")]
 			_ => debug!("No storage updates needed..."),
 		};

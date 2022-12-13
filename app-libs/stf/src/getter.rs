@@ -17,10 +17,8 @@
 
 use crate::{AccountId, KeyPair, Signature};
 use codec::{Decode, Encode};
-use encointer_primitives::{
-	balances::BalanceEntry, communities::CommunityIdentifier, scheduler::CeremonyIndexType,
-};
-use ita_sgx_runtime::{BlockNumber, System};
+use encointer_primitives::{communities::CommunityIdentifier, scheduler::CeremonyIndexType};
+use ita_sgx_runtime::System;
 use itp_stf_interface::ExecuteGetter;
 use itp_utils::stringify::account_id_to_string;
 use log::*;
@@ -81,12 +79,12 @@ pub enum TrustedGetter {
 	free_balance(AccountId),
 	reserved_balance(AccountId),
 	nonce(AccountId),
-	encointer_balance(AccountId, CommunityIdentifier),
+	//encointer_balance(AccountId, CommunityIdentifier),
 	//ceremonies_participant_index(AccountId, CommunityIdentifier),
 	//Not public : ceremonies_meetup_index(AccountId, CommunityIdentifier),
 	//ceremonies_reputations(AccountId, CommunityIdentifier),
-	ceremonies_attestations(AccountId, CommunityIdentifier),
-	ceremonies_aggregated_account_data(AccountId, CommunityIdentifier),
+	//ceremonies_attestations(AccountId, CommunityIdentifier),
+	//ceremonies_aggregated_account_data(AccountId, CommunityIdentifier),
 	ceremonies_registered_bootstrappers(AccountId, CommunityIdentifier, CeremonyIndexType),
 	ceremonies_registered_reputables(AccountId, CommunityIdentifier, CeremonyIndexType),
 	ceremonies_registered_endorsees(AccountId, CommunityIdentifier, CeremonyIndexType),
@@ -111,10 +109,10 @@ impl TrustedGetter {
 			TrustedGetter::free_balance(sender_account) => sender_account,
 			TrustedGetter::reserved_balance(sender_account) => sender_account,
 			TrustedGetter::nonce(sender_account) => sender_account,
-			TrustedGetter::encointer_balance(sender_account, _) => sender_account,
+			//TrustedGetter::encointer_balance(sender_account, _) => sender_account,
 			//TrustedGetter::ceremonies_participant_index(sender_account, _) => sender_account,
-			TrustedGetter::ceremonies_attestations(sender_account, _) => sender_account,
-			TrustedGetter::ceremonies_aggregated_account_data(sender_account, _) => sender_account,
+			//TrustedGetter::ceremonies_attestations(sender_account, _) => sender_account,
+			//TrustedGetter::ceremonies_aggregated_account_data(sender_account, _) => sender_account,
 			TrustedGetter::ceremonies_registered_bootstrappers(sender_account, _, _) =>
 				sender_account,
 			TrustedGetter::ceremonies_registered_reputables(sender_account, _, _) => sender_account,
@@ -179,6 +177,7 @@ impl ExecuteGetter for Getter {
 					debug!("Account nonce is {}", nonce);
 					Some(nonce.encode())
 				},
+				/*
 				TrustedGetter::encointer_balance(who, currency_id) => {
 					let balance: BalanceEntry<BlockNumber> = pallet_encointer_balances::Pallet::<
 						ita_sgx_runtime::Runtime,
@@ -186,7 +185,6 @@ impl ExecuteGetter for Getter {
 					debug!("TrustedGetter encointer_balance");
 					Some(balance.encode())
 				},
-				/*
 				TrustedGetter::ceremonies_participant_index(who, currency_id) => {
 					let ceremony_index = pallet_encointer_scheduler::Pallet::<
 						ita_sgx_runtime::Runtime,
@@ -199,7 +197,6 @@ impl ExecuteGetter for Getter {
 					);
 					Some(part.encode())
 				},
-				 */
 				TrustedGetter::ceremonies_attestations(who, community_id) => {
 					let ceremony_index = pallet_encointer_scheduler::Pallet::<
 						ita_sgx_runtime::Runtime,
@@ -222,6 +219,8 @@ impl ExecuteGetter for Getter {
 					>::get_aggregated_account_data(community_id, &who);
 					aggregated_account_data.personal.map(|p| p.encode())
 				},
+
+				 */
 				TrustedGetter::ceremonies_registered_bootstrappers(
 					who,
 					community_id,

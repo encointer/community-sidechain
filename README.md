@@ -1,7 +1,7 @@
 # Encointer Community Sidechain
 This repository is a detached fork of the [integritee-worker](https://github.com/integritee-network/worker).
 
-Encointer community sidechain for Encointer [node](https://github.com/encointer/encointer-node) or [parachain](https://github.com/encointer/encointer-parachain)
+Encointer community-sidechain for Encointer [node](https://github.com/encointer/encointer-node) or [parachain](https://github.com/encointer/encointer-parachain)
 
 This is part of [Encointer](https://github.com/encointer)
 

@@ -1,5 +1,5 @@
 /*
-	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright 2022 Encointer Association, Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -275,12 +275,12 @@ parameter_types! {
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
-//Hack to have the same masters on-chain and in the sidechain. In the sidechain, root can be the enclave.
+// Hack to have the same masters on-chain and in the sidechain.
 ord_parameter_types! {
 	pub const Alice: AccountId32 = AccountId32::new([212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133, 76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125]);
 }
 /// Hard coded origin for the pallet's `EnsureOrigin` associated type.
-/// Root or Alice (root in encointer node)
+/// Root or Alice (Alice is root in encointer node, The enclave account is root in the sidechain)
 pub type EnsureAliceOrRoot =
 	EitherOfDiverse<EnsureSignedBy<Alice, AccountId32>, EnsureRoot<AccountId>>;
 
