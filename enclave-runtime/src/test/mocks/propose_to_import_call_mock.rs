@@ -58,7 +58,7 @@ impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
 		todo!()
 	}
 
-	fn get_storage_verified<H: ParentchainHeaderTrait<Hash = H256>, V: Decode>(
+	fn get_storage_verified_and_decoded<H: ParentchainHeaderTrait<Hash = H256>, V: Decode>(
 		&self,
 		_storage_hash: Vec<u8>,
 		_header: &H,

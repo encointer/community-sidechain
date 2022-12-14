@@ -78,7 +78,7 @@ impl EnclaveOnChainOCallApi for OcallApi {
 		Ok(decoded_response)
 	}
 
-	fn get_storage_verified<H: Header<Hash = H256>, V: Decode>(
+	fn get_storage_verified_and_decoded<H: Header<Hash = H256>, V: Decode>(
 		&self,
 		storage_hash: Vec<u8>,
 		header: &H,
