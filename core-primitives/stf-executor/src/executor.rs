@@ -177,7 +177,7 @@ where
 		// global requests they are the same for every shard
 		let state_diff_update = self
 			.ocall_api
-			.get_multiple_storages_verified_and_decoded(storage_hashes, header)
+			.get_multiple_storages_verified(storage_hashes, header)
 			.map(into_map)?;
 
 		// Update parentchain block on all states.
@@ -207,7 +207,7 @@ where
 						let per_shard_hashes = storage_hashes_to_update_per_shard(&shard_id);
 						let per_shard_update = self
 							.ocall_api
-							.get_multiple_storages_verified_and_decoded(per_shard_hashes, header)
+							.get_multiple_storages_verified(per_shard_hashes, header)
 							.map(into_map)?;
 
 						Stf::apply_state_diff(&mut state, per_shard_update.into());

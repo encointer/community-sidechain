@@ -85,7 +85,7 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 		req: Vec<WorkerRequest>,
 	) -> SgxResult<Vec<WorkerResponse<V>>>;
 
-	fn get_storage_verified<H: Header<Hash = H256>, V: Decode>(
+	fn get_storage_verified_and_decoded<H: Header<Hash = H256>, V: Decode>(
 		&self,
 		storage_hash: Vec<u8>,
 		header: &H,

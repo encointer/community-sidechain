@@ -167,7 +167,7 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 		Ok(Vec::new())
 	}
 
-	fn get_storage_verified<Header: HeaderTrait<Hash = H256>, V: Decode>(
+	fn get_storage_verified_and_decoded<Header: HeaderTrait<Hash = H256>, V: Decode>(
 		&self,
 		storage_hash: Vec<u8>,
 		header: &Header,
