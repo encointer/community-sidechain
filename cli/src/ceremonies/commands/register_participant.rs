@@ -32,16 +32,16 @@ use log::*;
 use sp_core::{crypto::Ss58Codec, Pair};
 use std::str::FromStr;
 
-///Register participant for next encointer ceremony
+/// Register participant for next encointer ceremony.
 #[derive(Debug, Clone, Parser)]
 pub struct RegisterParticipantCommand {
 	/// Participant : sender's on-chain AccountId in ss58check format.
 	who: String,
 
-	/// Community Id
+	/// Community Id.
 	community_id: String,
 
-	/// Prove attendance reputation for last ceremony
+	/// Prove attendance reputation for last ceremony.
 	reputation: Option<String>,
 }
 

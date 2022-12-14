@@ -27,13 +27,13 @@ use log::*;
 use sp_core::Pair;
 use std::str::FromStr;
 
-///Register participant for next encointer ceremony
+/// List registered participants for next encointer ceremony.
 #[derive(Debug, Clone, Parser)]
 pub struct ListParticipantsCommand {
-	/// Only Ceremony Master can execute this (SUDO)
+	/// Only Ceremony Master can execute this (SUDO).
 	who: String,
 
-	/// Community Id
+	/// Community Id.
 	community_id: String,
 }
 
