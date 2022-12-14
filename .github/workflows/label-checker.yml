@@ -9,7 +9,7 @@ on:
 jobs:
     check_for_matching_labels:
       runs-on: ubuntu-latest
-      if: github.base_ref == 'master' && github.event.pull_request.draft == false
+      if: github.base_ref == 'main' && github.event.pull_request.draft == false
       steps:
         - name: Label check
           run: |
