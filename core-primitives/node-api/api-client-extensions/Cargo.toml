@@ -9,6 +9,9 @@ edition = "2021"
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 thiserror = { version = "1.0" }
 
+# encointer
+encointer-primitives = { git = "https://github.com/encointer/pallets.git", branch = "master", features = ["serde_derive"] }
+
 # substrate
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
@@ -21,5 +24,6 @@ substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git"
 itp-types = { path = "../../types" }
 
 [features]
+
 # used for unit testing only!
 mocks = []

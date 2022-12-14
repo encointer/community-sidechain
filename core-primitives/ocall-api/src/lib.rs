@@ -1,5 +1,5 @@
 /*
-	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright 2022 Encointer Association, Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -91,11 +91,17 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 		header: &H,
 	) -> Result<StorageEntryVerified<V>>;
 
-	fn get_multiple_storages_verified<H: Header<Hash = H256>, V: Decode>(
+	fn get_multiple_storages_verified_and_decoded<H: Header<Hash = H256>, V: Decode>(
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
 		header: &H,
 	) -> Result<Vec<StorageEntryVerified<V>>>;
+
+	fn get_multiple_storages_verified<H: Header<Hash = H256>>(
+		&self,
+		storage_hashes: Vec<Vec<u8>>,
+		header: &H,
+	) -> Result<Vec<StorageEntryVerified<Vec<u8>>>>;
 }
 
 /// Trait for sending metric updates.

@@ -1,5 +1,5 @@
 /*
-	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright 2022 Encointer Association, Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ extern crate log;
 
 mod base_cli;
 mod benchmark;
+mod ceremonies;
 mod command_utils;
 mod commands;
 #[cfg(feature = "evm")]
@@ -39,7 +40,6 @@ mod trusted_base_cli;
 mod trusted_command_utils;
 mod trusted_commands;
 mod trusted_operation;
-
 use crate::commands::Commands;
 use clap::Parser;
 

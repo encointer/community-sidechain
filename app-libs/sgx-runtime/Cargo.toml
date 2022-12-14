@@ -24,6 +24,7 @@ frame-support = { default-features = false, git = "https://github.com/paritytech
 frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 frame-system-benchmarking = { optional = true, default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 frame-system-rpc-runtime-api = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+pallet-asset-tx-payment = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 pallet-aura = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 pallet-balances = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 pallet-grandpa = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
@@ -48,6 +49,14 @@ sp-version = { default-features = false, git = "https://github.com/paritytech/su
 pallet-evm = { default-features = false, optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "polkadot-v0.9.28" }
 pallet-parentchain = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "develop" }
 
+# Encointer dependencies
+encointer-balances-tx-payment = { default-features = false, git = "https://github.com/encointer/pallets", branch = "master" }
+encointer-primitives = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "master", features = ["serde_derive"] }
+pallet-encointer-balances = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "master" }
+pallet-encointer-ceremonies = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "master" }
+pallet-encointer-communities = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "master" }
+pallet-encointer-scheduler = { default-features = false, git = "https://github.com/encointer/pallets.git", branch = "master" }
+
 [features]
 default = ["std"]
 # Compile the sgx-runtime with evm-pallet support in `no_std`.
@@ -65,6 +74,10 @@ runtime-benchmarks = [
     "frame-system-benchmarking",
     "frame-system/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
+    "pallet-encointer-balances/runtime-benchmarks",
+    "pallet-encointer-ceremonies/runtime-benchmarks",
+    "pallet-encointer-communities/runtime-benchmarks",
+    "pallet-encointer-scheduler/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
 ]
@@ -73,12 +86,19 @@ std = [
     "scale-info/std",
     "serde",
     "itp-sgx-runtime-primitives/std",
+    "encointer-primitives/std",
     "frame-executive/std",
     "frame-support/std",
     "frame-system/std",
     "frame-system-rpc-runtime-api/std",
+    "encointer-balances-tx-payment/std",
+    "pallet-asset-tx-payment/std",
     "pallet-aura/std",
     "pallet-balances/std",
+    "pallet-encointer-balances/std",
+    "pallet-encointer-ceremonies/std",
+    "pallet-encointer-communities/std",
+    "pallet-encointer-scheduler/std",
     "pallet-grandpa/std",
     "pallet-randomness-collective-flip/std",
     "pallet-sudo/std",

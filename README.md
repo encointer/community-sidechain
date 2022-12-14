@@ -1,6 +1,10 @@
 # Encointer Community Sidechain
 This repository is a detached fork of the [integritee-worker](https://github.com/integritee-network/worker).
 
+Encointer community-sidechain for Encointer [node](https://github.com/encointer/encointer-node) or [parachain](https://github.com/encointer/encointer-parachain)
+
+This is part of [Encointer](https://github.com/encointer)
+
 ## Handle Upstream Updates
 There is an `upstream/master` branch, which is used to track the upstream repository.
 
@@ -19,11 +23,6 @@ git push
 
 Alternatively, we can also track the release branches of `integritee-worker` - to be discussed.
 
-## integritee-worker
-
-Integritee worker for Integritee [node](https://github.com/integritee-network/integritee-node) or [parachain](https://github.com/integritee-network/parachain)
-
-This is part of [Integritee](https://integritee.network)
 
 ## Build and Run
 Please see our [Integritee Book](https://docs.integritee.network/4-development/4.4-sdk) to learn how to build and run this.

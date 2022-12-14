@@ -1,5 +1,5 @@
 /*
-	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright 2022 Encointer Association, Integritee AG and Supercomputing Systems AG
 	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,11 +66,22 @@ impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
 		todo!()
 	}
 
-	fn get_multiple_storages_verified<H: ParentchainHeaderTrait<Hash = H256>, V: Decode>(
+	fn get_multiple_storages_verified_and_decoded<
+		H: ParentchainHeaderTrait<Hash = H256>,
+		V: Decode,
+	>(
 		&self,
 		_storage_hashes: Vec<Vec<u8>>,
 		_header: &H,
 	) -> Result<Vec<StorageEntryVerified<V>>> {
+		todo!()
+	}
+
+	fn get_multiple_storages_verified<H: ParentchainHeaderTrait<Hash = H256>>(
+		&self,
+		_storage_hashes: Vec<Vec<u8>>,
+		_header: &H,
+	) -> Result<Vec<StorageEntryVerified<Vec<u8>>>> {
 		todo!()
 	}
 }

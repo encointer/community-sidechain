@@ -1,5 +1,5 @@
 /*
-	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright 2022 Encointer Association, Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -39,13 +39,16 @@ pub use evm::{
 };
 
 use core::convert::{TryFrom, TryInto};
+use encointer_primitives::balances::{BalanceType, Demurrage};
 use frame_support::weights::ConstantMultiplier;
+use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
 use pallet_transaction_payment::CurrencyAdapter;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 use sp_runtime::{
 	create_runtime_str, generic,
-	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT},
+	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Verify},
+	AccountId32, MultiSignature,
 };
 use sp_std::prelude::*;
 use sp_version::RuntimeVersion;
@@ -54,14 +57,16 @@ use sp_version::RuntimeVersion;
 pub use itp_sgx_runtime_primitives::{
 	constants::SLOT_DURATION,
 	types::{
-		AccountData, AccountId, Address, Balance, BlockNumber, Hash, Header, Index, Signature,
+		AccountData, AccountId, Address, Balance, BlockNumber, Hash, Header, Index, Moment,
+		Signature,
 	},
 };
 
+pub use encointer_balances_tx_payment::{AssetBalanceOf, AssetIdOf, BalanceToCommunityBalance};
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-	construct_runtime, parameter_types,
-	traits::{KeyOwnerProofSystem, Randomness},
+	construct_runtime, ord_parameter_types, parameter_types,
+	traits::{EitherOfDiverse, KeyOwnerProofSystem, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		IdentityFee, Weight,
@@ -69,6 +74,8 @@ pub use frame_support::{
 	StorageValue,
 };
 pub use pallet_balances::Call as BalancesCall;
+pub use pallet_encointer_balances::Call as EncointerBalancesCall;
+pub use pallet_encointer_ceremonies::Call as EncointerCeremoniesCall;
 pub use pallet_parentchain::Call as ParentchainCall;
 pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
@@ -91,7 +98,7 @@ pub type SignedExtra = (
 	frame_system::CheckEra<Runtime>,
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
-	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+	pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this sgx-runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
@@ -256,20 +263,96 @@ impl pallet_parentchain::Config for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const MomentsPerDay: Moment = 86_400_000; // [ms/d]
+	pub const DefaultDemurrage: Demurrage = Demurrage::from_bits(0x0000000000000000000001E3F0A8A973_i128);
+	/// 0.000005
+	pub const EncointerExistentialDeposit: BalanceType = BalanceType::from_bits(0x0000000000000000000053e2d6238da4_i128);
+	pub const MeetupSizeTarget: u64 = 10;
+	pub const MeetupMinSize: u64 = 3;
+	pub const MeetupNewbieLimitDivider: u64 = 2;
+}
+
+impl pallet_randomness_collective_flip::Config for Runtime {}
+
+// Hack to have the same masters on-chain and in the sidechain.
+ord_parameter_types! {
+	pub const Alice: AccountId32 = AccountId32::new([212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133, 76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125]);
+}
+/// Hard coded origin for the pallet's `EnsureOrigin` associated type.
+/// Root or Alice (Alice is root in encointer node, The enclave account is root in the sidechain)
+pub type EnsureAliceOrRoot =
+	EitherOfDiverse<EnsureSignedBy<Alice, AccountId32>, EnsureRoot<AccountId>>;
+
+impl pallet_encointer_scheduler::Config for Runtime {
+	type Event = Event;
+	type OnCeremonyPhaseChange = pallet_encointer_ceremonies::Pallet<Runtime>;
+	type MomentsPerDay = MomentsPerDay;
+	type CeremonyMaster = EnsureAliceOrRoot;
+	type WeightInfo = ();
+}
+
+impl pallet_encointer_communities::Config for Runtime {
+	type Event = Event;
+	type CommunityMaster = EnsureAliceOrRoot;
+	type TrustableForNonDestructiveAction = EnsureSigned<AccountId>;
+	type WeightInfo = ();
+}
+
+impl pallet_encointer_ceremonies::Config for Runtime {
+	type Event = Event;
+	type CeremonyMaster = EnsureAliceOrRoot;
+	type Public = <MultiSignature as Verify>::Signer;
+	type Signature = MultiSignature;
+	// Note: in production networks it is advised to use babes randomness source.
+	// But we have low security requirements here, so it should be fine.
+	type RandomnessSource = pallet_randomness_collective_flip::Pallet<Runtime>;
+	type MeetupSizeTarget = MeetupSizeTarget;
+	type MeetupMinSize = MeetupMinSize;
+	type MeetupNewbieLimitDivider = MeetupNewbieLimitDivider;
+	type WeightInfo = ();
+}
+
+impl pallet_encointer_balances::Config for Runtime {
+	type Event = Event;
+	type DefaultDemurrage = DefaultDemurrage;
+	type ExistentialDeposit = EncointerExistentialDeposit;
+	type WeightInfo = ();
+	type CeremonyMaster = EnsureAliceOrRoot;
+}
+
+impl pallet_asset_tx_payment::Config for Runtime {
+	type Event = Event;
+	type Fungibles = pallet_encointer_balances::Pallet<Runtime>;
+	type OnChargeAssetTransaction = pallet_asset_tx_payment::FungiblesAdapter<
+		encointer_balances_tx_payment::BalanceToCommunityBalance<Runtime>,
+		encointer_balances_tx_payment::BurnCredit,
+	>;
+}
+
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
-	pub enum Runtime where
+	pub struct Runtime where
 		Block = Block,
 		NodeBlock = opaque::Block,
-		UncheckedExtrinsic = UncheckedExtrinsic
+		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-		Parentchain: pallet_parentchain::{Pallet, Call, Storage},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 5,
+
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
+		AssetTxPayment: pallet_asset_tx_payment::{Pallet, Storage, Event<T>} = 12,
+
+		Parentchain: pallet_parentchain::{Pallet, Call, Storage} = 54,
+
+		EncointerScheduler: pallet_encointer_scheduler::{Pallet, Call, Storage, Config<T>, Event}  = 60,
+		EncointerCeremonies: pallet_encointer_ceremonies::{Pallet, Call, Storage, Config<T>, Event<T>} = 61,
+		EncointerBalances: pallet_encointer_balances::{Pallet, Call, Storage, Config, Event<T>} = 62,
+		EncointerCommunities: pallet_encointer_communities::{Pallet, Call, Storage, Config, Event<T>} = 63,
 	}
 );
 
@@ -279,19 +362,28 @@ construct_runtime!(
 // compiler flags withing the macro.
 #[cfg(feature = "evm")]
 construct_runtime!(
-	pub enum Runtime where
+	pub struct Runtime where
 		Block = Block,
 		NodeBlock = opaque::Block,
-		UncheckedExtrinsic = UncheckedExtrinsic
+		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-		Parentchain: pallet_parentchain::{Pallet, Call, Storage},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 5,
 
-		Evm: pallet_evm::{Pallet, Call, Storage, Config, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
+		AssetTxPayment: pallet_asset_tx_payment::{Pallet, Storage, Event<T>} = 12,
+
+		Parentchain: pallet_parentchain::{Pallet, Call, Storage} = 54,
+
+		EncointerScheduler: pallet_encointer_scheduler::{Pallet, Call, Storage, Config<T>, Event}  = 60,
+		EncointerCeremonies: pallet_encointer_ceremonies::{Pallet, Call, Storage, Config<T>, Event<T>} = 61,
+		EncointerBalances: pallet_encointer_balances::{Pallet, Call, Storage, Config, Event<T>} = 62,
+		EncointerCommunities: pallet_encointer_communities::{Pallet, Call, Storage, Config, Event<T>} = 63,
+
+		Evm: pallet_evm::{Pallet, Call, Storage, Config, Event<T>} = 80,
 	}
 );
 

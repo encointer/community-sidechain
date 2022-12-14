@@ -1,5 +1,5 @@
 /*
-	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright 2022 Encointer Association, Integritee AG and Supercomputing Systems AG
 	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -172,13 +172,13 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 		storage_hash: Vec<u8>,
 		header: &Header,
 	) -> Result<StorageEntryVerified<V>, itp_ocall_api::Error> {
-		self.get_multiple_storages_verified(vec![storage_hash], header)?
+		self.get_multiple_storages_verified_and_decoded(vec![storage_hash], header)?
 			.into_iter()
 			.next()
 			.ok_or(itp_ocall_api::Error::Storage(StorageValueUnavailable))
 	}
 
-	fn get_multiple_storages_verified<Header: HeaderTrait<Hash = H256>, V: Decode>(
+	fn get_multiple_storages_verified_and_decoded<Header: HeaderTrait<Hash = H256>, V: Decode>(
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
 		header: &Header,
@@ -190,6 +190,20 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 				.map(|val| Decode::decode(&mut val.as_slice()))
 				.transpose()
 				.map_err(itp_ocall_api::Error::Codec)?;
+
+			entries.push(StorageEntryVerified::new(hash, value))
+		}
+		Ok(entries)
+	}
+
+	fn get_multiple_storages_verified<Header: HeaderTrait<Hash = H256>>(
+		&self,
+		storage_hashes: Vec<Vec<u8>>,
+		header: &Header,
+	) -> Result<Vec<StorageEntryVerified<Vec<u8>>>, itp_ocall_api::Error> {
+		let mut entries = Vec::with_capacity(storage_hashes.len());
+		for hash in storage_hashes.into_iter() {
+			let value = self.get_at_header(header, &hash).cloned();
 
 			entries.push(StorageEntryVerified::new(hash, value))
 		}

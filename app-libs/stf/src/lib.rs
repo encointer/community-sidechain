@@ -1,5 +1,5 @@
 /*
-	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright 2022 Encointer Association, Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ pub use getter::*;
 pub use stf_sgx_primitives::{types::*, Stf};
 pub use trusted_call::*;
 
+pub mod encointer_helpers;
 #[cfg(feature = "evm")]
 pub mod evm_helpers;
 pub mod getter;
@@ -61,6 +62,7 @@ pub type AuthorityId = <Signature as Verify>::Signer;
 pub type AccountId = AccountId32;
 pub type Hash = H256;
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
+pub type Moment = u64;
 
 pub type ShardIdentifier = H256;
 

@@ -1,5 +1,5 @@
 /*
-	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright 2022 Encointer Association
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -15,20 +15,7 @@
 
 */
 
-//! Some substrate-api-client extension traits.
-
-pub use substrate_api_client::{rpc::WsRpcClient, Api, ApiClientError};
-
-pub mod account;
-pub mod chain;
-pub mod encointer;
-pub mod pallet_teeracle;
-pub mod pallet_teerex;
-pub mod pallet_teerex_api_mock;
-
-pub use account::*;
-pub use chain::*;
-pub use pallet_teeracle::*;
-pub use pallet_teerex::*;
-
-pub type ApiResult<T> = Result<T, ApiClientError>;
+pub mod ceremonies_command_utils;
+pub mod list_participants;
+pub mod register_participant;
+pub mod upgrade_registration;

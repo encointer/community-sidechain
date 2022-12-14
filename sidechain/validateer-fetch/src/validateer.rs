@@ -1,5 +1,5 @@
 /*
-	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright 2022 Encointer Association, Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ impl<OnchainStorage: EnclaveOnChainOCallApi> ValidateerFetch for OnchainStorage 
 		}
 
 		let enclaves: Vec<Enclave> = self
-			.get_multiple_storages_verified(hashes, header)?
+			.get_multiple_storages_verified_and_decoded(hashes, header)?
 			.into_iter()
 			.filter_map(|e| e.into_tuple().1)
 			.collect();
