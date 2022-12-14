@@ -14,9 +14,9 @@ itp-node-api-metadata-provider = { default-features = false, path = "metadata-pr
 [features]
 default = ["std"]
 std = [
-    "itp-api-client-extensions/std",
+    "itp-api-client-extensions",
     "itp-api-client-types/std",
-    "itp-node-api-factory/std",
+    "itp-node-api-factory",
     "itp-node-api-metadata/std",
     "itp-node-api-metadata-provider/std",
 ]
