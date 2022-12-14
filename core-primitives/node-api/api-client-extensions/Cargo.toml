@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 # crates.io
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
-thiserror = { version = "1.0"}
+thiserror = { version = "1.0" }
 
 # encointer
 encointer-primitives = { git = "https://github.com/encointer/pallets.git", branch = "master", features = ["serde_derive"] }
