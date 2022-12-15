@@ -259,7 +259,7 @@ where
 			match CeremonyPhaseType::decode(&mut &*next_ceremony_phase) {
 				Ok(decoded_next_ceremony_phase) => {
 					if current_ceremony_phase.is_none()
-						|| decoded_next_ceremony_phase != current_ceremony_phase.unwrap_or_default()
+						|| decoded_next_ceremony_phase != current_ceremony_phase.unwrap()
 					{
 						info!(
 							"Current ceremony phase has changed: Phase is now {:?}",
