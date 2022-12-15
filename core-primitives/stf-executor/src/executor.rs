@@ -183,15 +183,17 @@ where
 			.get_multiple_storages_verified(storage_hashes, header)
 			.map(into_map)?;
 
-		// Update parentchain block on all states.
+		// Update shards states.
 		let shards = self.state_handler.list_shards()?;
 		for shard_id in shards {
 			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;
+			// Update parentchain block on all states.
 			match Stf::update_parentchain_block(&mut state, header.clone()) {
 				Ok(_) => {},
 				Err(e) => error!("Could not update parentchain block. {:?}: {:?}", shard_id, e),
 			}
 
+			// Update current_ceremony_phase storage for every shard, if it has changed on the parentchain.
 			if let Some(maybe_next_ceremony_phase) =
 				state_diff_update.get(&current_ceremony_phase_storage_key())
 			{
