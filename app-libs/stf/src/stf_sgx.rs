@@ -251,9 +251,7 @@ impl<Call, Getter, State, Runtime> EncointerSchedulerPalletInterface<State>
 	for Stf<Call, Getter, State, Runtime>
 where
 	State: SgxExternalitiesTrait,
-	Runtime: frame_system::Config
-		+ pallet_encointer_scheduler::Config
-		+ pallet_encointer_ceremonies::Config,
+	Runtime: pallet_encointer_scheduler::Config + pallet_encointer_ceremonies::Config,
 {
 	fn update_ceremony_phase(state: &mut State, next_ceremony_phase: &[u8]) {
 		state.execute_with(|| {

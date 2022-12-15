@@ -20,7 +20,6 @@ use crate::{
 	Cli,
 };
 
-use itp_types::OpaqueCall;
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use substrate_api_client::{compose_call, compose_extrinsic, UncheckedExtrinsicV4, XtStatus};
 

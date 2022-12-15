@@ -15,9 +15,6 @@
 
 */
 
-extern crate alloc;
-use alloc::vec::Vec;
-
 /// Interface trait of the encointer scheduler pallet.
 pub trait EncointerSchedulerPalletInterface<State> {
 	/// Updates the ceremony phase and if it has changed, call on_ceremony_phase_change
