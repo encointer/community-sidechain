@@ -255,10 +255,10 @@ where
 		+ pallet_encointer_scheduler::Config
 		+ pallet_encointer_ceremonies::Config,
 {
-	fn update_ceremony_phase(state: &mut State, next_ceremony_phase: &Vec<u8>) {
+	fn update_ceremony_phase(state: &mut State, next_ceremony_phase: &[u8]) {
 		state.execute_with(|| {
 			let current_ceremony_phase = current_ceremony_phase();
-			match CeremonyPhaseType::decode(&mut next_ceremony_phase.as_slice()) {
+			match CeremonyPhaseType::decode(&mut &*next_ceremony_phase) {
 				Ok(decoded_next_ceremony_phase) => {
 					if current_ceremony_phase.is_none()
 						|| decoded_next_ceremony_phase != current_ceremony_phase.unwrap()

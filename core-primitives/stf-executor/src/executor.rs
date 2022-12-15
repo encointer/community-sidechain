@@ -199,7 +199,10 @@ where
 			{
 				match maybe_next_ceremony_phase {
 					Some(encoded_next_ceremony_phase) => {
-						Stf::update_ceremony_phase(&mut state, encoded_next_ceremony_phase);
+						Stf::update_ceremony_phase(
+							&mut state,
+							&mut encoded_next_ceremony_phase.as_slice(),
+						);
 					},
 					_ => {
 						error!("no next ceremony phase in state diff !")
