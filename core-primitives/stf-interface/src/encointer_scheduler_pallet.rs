@@ -18,5 +18,5 @@
 /// Interface trait of the encointer scheduler pallet.
 pub trait EncointerSchedulerPalletInterface<State> {
 	/// Updates the ceremony phase and if it has changed, call on_ceremony_phase_change
-	fn update_ceremony_phase(state: &mut State, next_ceremony_phase: &[u8]);
+	fn update_ceremony_phase(state: &mut State, next_ceremony_phase: &mut &[u8]);
 }
