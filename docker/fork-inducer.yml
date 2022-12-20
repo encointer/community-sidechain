@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: ping.Dockerfile
-    depends_on: [ 'integritee-node', 'integritee-worker-1', 'integritee-worker-2' ]
+    depends_on: [ 'encointer-node', 'integritee-worker-1', 'integritee-worker-2' ]
     networks:
       - integritee-test-network
     #entrypoint: "ping integritee-worker-2 | while read pong; do echo \"$$(date): $$pong\"; done"
@@ -14,7 +14,7 @@ services:
     build:
       context: .
       dockerfile: fork.Dockerfile
-    depends_on: [ 'integritee-node', 'integritee-worker-1', 'integritee-worker-2' ]
+    depends_on: [ 'encointer-node', 'integritee-worker-1', 'integritee-worker-2' ]
     networks:
       - integritee-test-network
     volumes:

@@ -25,7 +25,7 @@ use substrate_api_client::utils::storage_key;
 
 #[allow(unused)]
 fn test_ocall_worker_request() {
-	info!("testing ocall_worker_request. Hopefully integritee-node is running...");
+	info!("testing ocall_worker_request. Hopefully encointer-node is running...");
 	let requests =
 		vec![WorkerRequest::ChainStorage(storage_key("Balances", "TotalIssuance").0, None)];
 
