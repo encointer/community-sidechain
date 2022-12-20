@@ -835,7 +835,6 @@ impl ExecuteCall for TrustedCallSigned {
 			| TrustedCall::ceremonies_unregister_participant(_, cid, _) => {
 			 */
 			TrustedCall::ceremonies_register_participant(_, cid, _) => {
-				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
 				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
 				key_hashes.push(storage_map_key(
@@ -854,7 +853,6 @@ impl ExecuteCall for TrustedCallSigned {
 			/*
 			//get_aggregated_account_data ?
 			TrustedCall::ceremonies_attest_attendees(_, cid, _, ceremony_index, _) => {
-				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
 				key_hashes.push(storage_value_key("EncointerScheduler", "PhaseDurations"));
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
 				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
@@ -868,7 +866,6 @@ impl ExecuteCall for TrustedCallSigned {
 				));
 			},
 			TrustedCall::ceremonies_claim_rewards(_, cid, _) => {
-				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
 				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
 				key_hashes.push(storage_value_key("EncointerCommunities", "NominalIncome"));
 				key_hashes.push(storage_map_key(
@@ -878,11 +875,9 @@ impl ExecuteCall for TrustedCallSigned {
 					&StorageHasher::Blake2_128Concat,
 				));
 			},
-			TrustedCall::ceremonies_set_meetup_time_offset(_, _) => {
-				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
-			},
+			TrustedCall::ceremonies_set_meetup_time_offset(_, _) =>
+				debug!("No storage updates needed..."),
 			TrustedCall::ceremonies_endorse_newcomer(_, cid, _) => {
-				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
 				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
 				key_hashes.push(storage_map_key(

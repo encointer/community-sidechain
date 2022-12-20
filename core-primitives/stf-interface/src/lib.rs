@@ -25,6 +25,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use itp_types::OpaqueCall;
 
+pub mod encointer_scheduler_pallet;
 #[cfg(feature = "mocks")]
 pub mod mocks;
 pub mod parentchain_pallet;
