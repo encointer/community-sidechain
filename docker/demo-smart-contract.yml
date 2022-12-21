@@ -6,7 +6,7 @@ services:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-client
-    depends_on: ['integritee-node', 'integritee-worker-1', 'integritee-worker-2']
+    depends_on: ['encointer-node', 'integritee-worker-1', 'integritee-worker-2']
     environment:
       - RUST_LOG=warn,ws=warn,itc_rpc_client=warn
     networks:
