@@ -82,6 +82,8 @@ pub enum StfError {
 	InvalidNonce(Index),
 	StorageHashMismatch,
 	InvalidStorageDiff,
+	#[display(fmt = "Insufficient privileges {:?}, are you sure you are the ceremony master?", _0)]
+	MissingMasterPrivileges(AccountId),
 }
 
 #[derive(Clone)]

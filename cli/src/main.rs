@@ -32,6 +32,7 @@ mod benchmark;
 mod ceremonies;
 mod command_utils;
 mod commands;
+mod encointer_balances;
 mod encointer_base_cli;
 #[cfg(feature = "evm")]
 mod evm;

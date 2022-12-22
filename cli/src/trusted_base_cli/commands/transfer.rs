@@ -1,5 +1,5 @@
 /*
-	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright 2022 Encointer Association, Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -23,10 +23,12 @@ use crate::{
 	Cli,
 };
 use codec::Decode;
+use encointer_primitives::{balances::BalanceType, communities::CommunityIdentifier};
 use ita_stf::{Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
 use log::*;
 use my_node_runtime::Balance;
 use sp_core::{crypto::Ss58Codec, Pair};
+use std::str::FromStr;
 
 #[derive(Parser)]
 pub struct TransferCommand {
@@ -38,6 +40,9 @@ pub struct TransferCommand {
 
 	/// amount to be transferred
 	amount: Balance,
+
+	/// Optional Community Id. If it is supplied, transfers balance in that community currency. Otherwise send parentchain native token"
+	community_id: Option<String>,
 }
 
 impl TransferCommand {
@@ -50,10 +55,24 @@ impl TransferCommand {
 		println!("send trusted call transfer from {} to {}: {}", from.public(), to, self.amount);
 		let (mrenclave, shard) = get_identifiers(trusted_args);
 		let nonce = get_layer_two_nonce!(from, cli, trusted_args);
-		let top: TrustedOperation =
-			TrustedCall::balance_transfer(from.public().into(), to, self.amount)
+
+		let top = match &self.community_id {
+			Some(cid) => {
+				let cid = CommunityIdentifier::from_str(cid).unwrap();
+				println!("in community {} currency", cid);
+				TrustedCall::encointer_balance_transfer(
+					from.public().into(),
+					to,
+					cid,
+					BalanceType::from_num(self.amount),
+				)
 				.sign(&KeyPair::Sr25519(from), nonce, &mrenclave, &shard)
-				.into_trusted_operation(trusted_args.direct);
+				.into_trusted_operation(trusted_args.direct)
+			},
+			None => TrustedCall::balance_transfer(from.public().into(), to, self.amount)
+				.sign(&KeyPair::Sr25519(from), nonce, &mrenclave, &shard)
+				.into_trusted_operation(trusted_args.direct),
+		};
 		let _ = perform_trusted_operation(cli, trusted_args, &top);
 		info!("trusted call transfer executed");
 	}
