@@ -76,7 +76,7 @@ mod tests {
 		let mut state = SgxExternalities::default();
 
 		assert_matches!(
-			TestStateGetter::get_state(&signed_getter, &mut state),
+			TestStateGetter::get_state(&signed_getter.into(), &mut state),
 			Err(Error::OperationHasInvalidSignature)
 		);
 	}
@@ -87,6 +87,6 @@ mod tests {
 		let signed_getter =
 			TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
 		let mut state = SgxExternalities::default();
-		assert!(TestStateGetter::get_state(&signed_getter, &mut state).is_ok());
+		assert!(TestStateGetter::get_state(&signed_getter.into(), &mut state).is_ok());
 	}
 }

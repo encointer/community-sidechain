@@ -83,10 +83,7 @@ mod tests {
 
 	struct TestStateGetter;
 	impl GetState<TestState> for TestStateGetter {
-		fn get_state(
-			_getter: &TrustedGetterSigned,
-			state: &mut TestState,
-		) -> Result<Option<Vec<u8>>> {
+		fn get_state(_getter: &Getter, state: &mut TestState) -> Result<Option<Vec<u8>>> {
 			Ok(Some(state.encode()))
 		}
 	}
@@ -110,16 +107,17 @@ mod tests {
 
 	#[test]
 	fn executing_public_getter_gives_error() {
-		// no support for public getters yet.
-		let getter = Getter::public(PublicGetter::some_value);
-
 		let test_state = 23489u64;
 		let state_observer = Arc::new(TestStateObserver::new(test_state));
 		let getter_executor = TestGetterExecutor::new(state_observer);
+		let getter = Getter::public(PublicGetter::some_value);
 
-		assert!(getter_executor
+		let state_result = getter_executor
 			.execute_getter(&ShardIdentifier::default(), getter.encode())
-			.is_err());
+			.unwrap()
+			.unwrap();
+		let decoded_state: TestState = Decode::decode(&mut state_result.as_slice()).unwrap();
+		assert_eq!(decoded_state, test_state);
 	}
 
 	fn dummy_trusted_getter() -> TrustedGetterSigned {
