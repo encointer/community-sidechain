@@ -17,7 +17,7 @@
 
 use crate::error::{Error, Result};
 use core::marker::PhantomData;
-use ita_stf::{Getter, TrustedGetterSigned};
+use ita_stf::Getter;
 use itp_sgx_externalities::SgxExternalities;
 use itp_stf_interface::StateGetterInterface;
 use log::debug;
@@ -29,7 +29,7 @@ pub trait GetState<StateType> {
 	///
 	/// Also verifies the signature of the trusted getter and returns an error
 	/// if it's invalid.
-	fn get_state(getter: &TrustedGetterSigned, state: &mut StateType) -> Result<Option<Vec<u8>>>;
+	fn get_state(getter: &Getter, state: &mut StateType) -> Result<Option<Vec<u8>>>;
 }
 
 pub struct StfStateGetter<Stf> {
@@ -40,16 +40,16 @@ impl<Stf> GetState<SgxExternalities> for StfStateGetter<Stf>
 where
 	Stf: StateGetterInterface<Getter, SgxExternalities>,
 {
-	fn get_state(
-		getter: &TrustedGetterSigned,
-		state: &mut SgxExternalities,
-	) -> Result<Option<Vec<u8>>> {
-		debug!("verifying signature of TrustedGetterSigned");
-		// FIXME: Trusted Getter should not be hardcoded. But
-		// verify_signature is currently not available as a Trait.
-		if let false = getter.verify_signature() {
-			return Err(Error::OperationHasInvalidSignature)
+	fn get_state(getter: &Getter, state: &mut SgxExternalities) -> Result<Option<Vec<u8>>> {
+		if let Getter::trusted(getter) = getter {
+			debug!("verifying signature of TrustedGetterSigned");
+			// FIXME: Trusted Getter should not be hardcoded. But
+			// verify_signature is currently not available as a Trait.
+			if !getter.verify_signature() {
+				return Err(Error::OperationHasInvalidSignature)
+			}
 		}
+
 		debug!("calling into STF to get state");
 		Ok(Stf::execute_getter(state, getter.clone().into()))
 	}

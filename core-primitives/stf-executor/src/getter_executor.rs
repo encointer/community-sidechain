@@ -18,16 +18,13 @@
 //! Getter executor uses the state observer to get the most recent state and runs the getter on it.
 //! The getter is verified (signature verfification) inside the `GetState` implementation.
 
-use crate::{
-	error::{Error, Result},
-	state_getter::GetState,
-};
+use crate::{error::Result, state_getter::GetState};
 use codec::Decode;
 use ita_stf::Getter;
 use itp_stf_state_observer::traits::ObserveState;
 use itp_types::ShardIdentifier;
 use log::*;
-use std::{format, marker::PhantomData, sync::Arc, time::Instant, vec::Vec};
+use std::{marker::PhantomData, sync::Arc, time::Instant, vec::Vec};
 
 /// Trait to execute a getter for a specific shard.
 pub trait ExecuteGetter {
@@ -61,19 +58,14 @@ where
 	) -> Result<Option<Vec<u8>>> {
 		let getter: Getter = Decode::decode(&mut encoded_signed_getter.as_slice())?;
 
-		trace!("Successfully decoded trusted getter");
-		if let Getter::trusted(trusted_getter_signed) = getter {
-			let getter_timer_start = Instant::now();
-			let state_result = self.state_observer.observe_state(shard, |state| {
-				StateGetter::get_state(&trusted_getter_signed, state)
-			})??;
+		let getter_timer_start = Instant::now();
+		let state_result = self
+			.state_observer
+			.observe_state(shard, |state| StateGetter::get_state(&getter, state))??;
 
-			debug!("Getter executed in {} ms", getter_timer_start.elapsed().as_millis());
+		debug!("Getter executed in {} ms", getter_timer_start.elapsed().as_millis());
 
-			Ok(state_result)
-		} else {
-			Err(Error::Other(format!("Unsupported getter type: {:?}", getter).into()))
-		}
+		Ok(state_result)
 	}
 }
 

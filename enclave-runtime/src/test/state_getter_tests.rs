@@ -36,7 +36,7 @@ pub fn state_getter_works() {
 	let mut state = test_state();
 
 	let encoded_balance =
-		TestStfStateGetter::get_state(&signed_getter, &mut state).unwrap().unwrap();
+		TestStfStateGetter::get_state(&signed_getter.into(), &mut state).unwrap().unwrap();
 
 	let balance = Balance::decode(&mut encoded_balance.as_slice()).unwrap();
 
