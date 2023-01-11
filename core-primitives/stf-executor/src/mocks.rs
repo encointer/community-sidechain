@@ -140,7 +140,7 @@ impl<StateType> GetState<StateType> for GetStateMock<StateType>
 where
 	StateType: Encode,
 {
-	fn get_state(_getter: &Getter, state: &mut StateType) -> Result<Option<Vec<u8>>> {
+	fn get_state(_getter: Getter, state: &mut StateType) -> Result<Option<Vec<u8>>> {
 		Ok(Some(state.encode()))
 	}
 }

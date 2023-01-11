@@ -29,7 +29,7 @@ pub trait GetState<StateType> {
 	///
 	/// Also verifies the signature of the trusted getter and returns an error
 	/// if it's invalid.
-	fn get_state(getter: &Getter, state: &mut StateType) -> Result<Option<Vec<u8>>>;
+	fn get_state(getter: Getter, state: &mut StateType) -> Result<Option<Vec<u8>>>;
 }
 
 pub struct StfStateGetter<Stf> {
@@ -40,8 +40,8 @@ impl<Stf> GetState<SgxExternalities> for StfStateGetter<Stf>
 where
 	Stf: StateGetterInterface<Getter, SgxExternalities>,
 {
-	fn get_state(getter: &Getter, state: &mut SgxExternalities) -> Result<Option<Vec<u8>>> {
-		if let Getter::trusted(getter) = getter {
+	fn get_state(getter: Getter, state: &mut SgxExternalities) -> Result<Option<Vec<u8>>> {
+		if let Getter::trusted(ref getter) = getter {
 			debug!("verifying signature of TrustedGetterSigned");
 			// FIXME: Trusted Getter should not be hardcoded. But
 			// verify_signature is currently not available as a Trait.
@@ -87,6 +87,6 @@ mod tests {
 		let signed_getter =
 			TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
 		let mut state = SgxExternalities::default();
-		assert!(TestStateGetter::get_state(&signed_getter.into(), &mut state).is_ok());
+		assert!(TestStateGetter::get_state(signed_getter.into(), &mut state).is_ok());
 	}
 }

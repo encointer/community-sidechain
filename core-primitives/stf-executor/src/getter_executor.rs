@@ -61,7 +61,7 @@ where
 		let getter_timer_start = Instant::now();
 		let state_result = self
 			.state_observer
-			.observe_state(shard, |state| StateGetter::get_state(&getter, state))??;
+			.observe_state(shard, |state| StateGetter::get_state(getter, state))??;
 
 		debug!("Getter executed in {} ms", getter_timer_start.elapsed().as_millis());
 
@@ -83,7 +83,7 @@ mod tests {
 
 	struct TestStateGetter;
 	impl GetState<TestState> for TestStateGetter {
-		fn get_state(_getter: &Getter, state: &mut TestState) -> Result<Option<Vec<u8>>> {
+		fn get_state(_getter: Getter, state: &mut TestState) -> Result<Option<Vec<u8>>> {
 			Ok(Some(state.encode()))
 		}
 	}
