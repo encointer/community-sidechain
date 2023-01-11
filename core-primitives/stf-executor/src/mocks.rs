@@ -24,8 +24,7 @@ use crate::{
 use codec::Encode;
 use ita_stf::{
 	hash::{Hash, TrustedOperationOrHash},
-	AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetterSigned,
-	TrustedOperation,
+	AccountId, Getter, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedOperation,
 };
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_types::H256;
@@ -141,7 +140,7 @@ impl<StateType> GetState<StateType> for GetStateMock<StateType>
 where
 	StateType: Encode,
 {
-	fn get_state(_getter: &TrustedGetterSigned, state: &mut StateType) -> Result<Option<Vec<u8>>> {
+	fn get_state(_getter: Getter, state: &mut StateType) -> Result<Option<Vec<u8>>> {
 		Ok(Some(state.encode()))
 	}
 }

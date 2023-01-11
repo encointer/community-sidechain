@@ -155,258 +155,267 @@ impl TrustedGetterSigned {
 impl ExecuteGetter for Getter {
 	fn execute(self) -> Option<Vec<u8>> {
 		match self {
-			Getter::trusted(g) => match g.getter {
-				TrustedGetter::free_balance(who) => {
-					let info = System::account(&who);
-					debug!("TrustedGetter free_balance");
-					debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
-					debug!("Account free balance is {}", info.data.free);
-					Some(info.data.free.encode())
-				},
+			Getter::trusted(g) => g.execute(),
+			Getter::public(g) => g.execute(),
+		}
+	}
 
-				TrustedGetter::reserved_balance(who) => {
-					let info = System::account(&who);
-					debug!("TrustedGetter reserved_balance");
-					debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
-					debug!("Account reserved balance is {}", info.data.reserved);
-					Some(info.data.reserved.encode())
-				},
-				TrustedGetter::nonce(who) => {
-					let nonce = System::account_nonce(&who);
-					debug!("TrustedGetter nonce");
-					debug!("Account nonce is {}", nonce);
-					Some(nonce.encode())
-				},
-				/*
-				TrustedGetter::encointer_balance(who, currency_id) => {
-					let balance: BalanceEntry<BlockNumber> = pallet_encointer_balances::Pallet::<
-						ita_sgx_runtime::Runtime,
-					>::balance_entry(currency_id, who);
-					debug!("TrustedGetter encointer_balance");
-					Some(balance.encode())
-				},
-				TrustedGetter::ceremonies_participant_index(who, currency_id) => {
-					let ceremony_index = pallet_encointer_scheduler::Pallet::<
-						ita_sgx_runtime::Runtime,
-					>::current_ceremony_index();
-					let part: ParticipantIndexType = pallet_encointer_ceremonies::Pallet::<
-						ita_sgx_runtime::Runtime,
-					>::participant_index(
-						(currency_id, ceremony_index),
-						AccountId::from(who),
-					);
-					Some(part.encode())
-				},
-				TrustedGetter::ceremonies_attestations(who, community_id) => {
-					let ceremony_index = pallet_encointer_scheduler::Pallet::<
-						ita_sgx_runtime::Runtime,
-					>::current_ceremony_index();
-					let attestation_index = pallet_encointer_ceremonies::Pallet::<
-						ita_sgx_runtime::Runtime,
-					>::attestation_index(
-						(community_id, ceremony_index), who
-					);
-					let attestations = pallet_encointer_ceremonies::Pallet::<
-						ita_sgx_runtime::Runtime,
-					>::attestation_registry(
-						(community_id, ceremony_index), attestation_index
-					);
-					Some(attestations.encode())
-				},
-				TrustedGetter::ceremonies_aggregated_account_data(who, community_id) => {
-					let aggregated_account_data = pallet_encointer_ceremonies::Pallet::<
-						ita_sgx_runtime::Runtime,
-					>::get_aggregated_account_data(community_id, &who);
-					aggregated_account_data.personal.map(|p| p.encode())
-				},
+	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
+		match self {
+			Getter::trusted(g) => g.get_storage_hashes_to_update(),
+			Getter::public(g) => g.get_storage_hashes_to_update(),
+		}
+	}
+}
 
-				 */
-				TrustedGetter::ceremonies_registered_bootstrappers(
-					who,
-					community_id,
-					ceremony_index,
-				) => {
-					debug!("TrustedGetter ceremonies_registered_bootstrappers");
-					//Block getter of confidential data if it is not the CeremonyMaster
-					if !is_ceremony_master(who) {
-						return None
-					}
-					let mut participants: Vec<AccountId> = Vec::new();
-
-					let num_registered_bootstrappers = pallet_encointer_ceremonies::Pallet::<
-						ita_sgx_runtime::Runtime,
-					>::bootstrapper_count((
-						community_id,
-						ceremony_index,
-					));
-					debug!("found {} bootstrappers ", num_registered_bootstrappers);
-					if num_registered_bootstrappers < 1 {
-						return None
-					}
-
-					for i in 0..num_registered_bootstrappers {
-						match pallet_encointer_ceremonies::Pallet::<
-							ita_sgx_runtime::Runtime,
-						>::bootstrapper_registry(
-							(community_id, ceremony_index), i+1
-						) {
-							Some(b) => {
-								participants.push(b.clone());
-							},
-							_ => {warn!("no bootstrapper for {}, {}, {}", community_id, ceremony_index, i+1)},
-						};
-					}
-					Some(participants.encode())
-				},
-				TrustedGetter::ceremonies_registered_reputables(
-					who,
-					community_id,
-					ceremony_index,
-				) => {
-					debug!("TrustedGetter ceremonies_registered_reputables");
-					//Block getter of confidential data if it is not the CeremonyMaster
-					if !is_ceremony_master(who) {
-						return None
-					}
-
-					let mut participants: Vec<AccountId> = Vec::new();
-
-					let num_registered_reputables = pallet_encointer_ceremonies::Pallet::<
-						ita_sgx_runtime::Runtime,
-					>::reputable_count((
-						community_id,
-						ceremony_index,
-					));
-					debug!("found {} reputables ", num_registered_reputables);
-					if num_registered_reputables < 1 {
-						return None
-					}
-
-					for i in 0..num_registered_reputables {
-						match pallet_encointer_ceremonies::Pallet::<
-							ita_sgx_runtime::Runtime,
-						>::reputable_registry(
-							(community_id, ceremony_index), i+1
-						) {
-							Some(b) => {
-								participants.push(b.clone());
-							},
-							_ => {warn!("no reputable for {}, {}, {}", community_id, ceremony_index, i+1)},
-						};
-					}
-					Some(participants.encode())
-				},
-				TrustedGetter::ceremonies_registered_endorsees(
-					who,
-					community_id,
-					ceremony_index,
-				) => {
-					debug!("TrustedGetter ceremonies_registered_endorsees");
-					//Block getter of confidential data if it is not the CeremonyMaster
-					if !is_ceremony_master(who) {
-						return None
-					}
-
-					let mut participants: Vec<AccountId> = Vec::new();
-
-					let num_registered_endorsees = pallet_encointer_ceremonies::Pallet::<
-						ita_sgx_runtime::Runtime,
-					>::endorsee_count((
-						community_id,
-						ceremony_index,
-					));
-					debug!("found {} endorsees ", num_registered_endorsees);
-					if num_registered_endorsees < 1 {
-						return None
-					}
-
-					for i in 0..num_registered_endorsees {
-						match pallet_encointer_ceremonies::Pallet::<
-							ita_sgx_runtime::Runtime,
-						>::endorsee_registry(
-							(community_id, ceremony_index), i+1
-						) {
-							Some(b) => {
-								participants.push(b.clone());
-							},
-							_ => {warn!("no endorsee for {}, {}, {}", community_id, ceremony_index, i+1)},
-						};
-					}
-					Some(participants.encode())
-				},
-				TrustedGetter::ceremonies_registered_newbies(who, community_id, ceremony_index) => {
-					debug!("TrustedGetter ceremonies_registered_newbies");
-					//Block getter of confidential data if it is not the CeremonyMaster
-					if !is_ceremony_master(who) {
-						return None
-					}
-
-					let mut participants: Vec<AccountId> = Vec::new();
-
-					let num_registered_newbies = pallet_encointer_ceremonies::Pallet::<
-						ita_sgx_runtime::Runtime,
-					>::newbie_count((community_id, ceremony_index));
-					debug!("found {} newbies ", num_registered_newbies);
-					if num_registered_newbies < 1 {
-						return None
-					}
-
-					for i in 0..num_registered_newbies {
-						match pallet_encointer_ceremonies::Pallet::<
-							ita_sgx_runtime::Runtime,
-						>::newbie_registry(
-							(community_id, ceremony_index), i+1
-						) {
-							Some(b) => {
-								participants.push(b.clone());
-							},
-							_ => {warn!("no newbie for {}, {}, {}", community_id, ceremony_index, i+1)},
-						};
-					}
-					Some(participants.encode())
-				},
-				/*
-				TrustedGetter::ceremonies_meetups(who, community_id) => {
-					//Master check
-				},
-				TrustedGetter::ceremonies_attestees(who, community_id) => {
-					//Master check
-				},
-
-				 */
-				#[cfg(feature = "evm")]
-				TrustedGetter::evm_nonce(who) => {
-					let evm_account = get_evm_account(&who);
-					let evm_account = HashedAddressMapping::into_account_id(evm_account);
-					let nonce = System::account_nonce(&evm_account);
-					debug!("TrustedGetter evm_nonce");
-					debug!("Account nonce is {}", nonce);
-					Some(nonce.encode())
-				},
-				#[cfg(feature = "evm")]
-				TrustedGetter::evm_account_codes(_who, evm_account) =>
-				// TODO: This probably needs some security check if who == evm_account (or assosciated)
-					if let Some(info) = get_evm_account_codes(&evm_account) {
-						debug!("TrustedGetter Evm Account Codes");
-						debug!("AccountCodes for {} is {:?}", evm_account, info);
-						Some(info) // TOOD: encoded?
-					} else {
-						None
-					},
-				#[cfg(feature = "evm")]
-				TrustedGetter::evm_account_storages(_who, evm_account, index) =>
-				// TODO: This probably needs some security check if who == evm_account (or assosciated)
-					if let Some(value) = get_evm_account_storages(&evm_account, &index) {
-						debug!("TrustedGetter Evm Account Storages");
-						debug!("AccountStorages for {} is {:?}", evm_account, value);
-						Some(value.encode())
-					} else {
-						None
-					},
+impl ExecuteGetter for TrustedGetterSigned {
+	fn execute(self) -> Option<Vec<u8>> {
+		match self.getter {
+			TrustedGetter::free_balance(who) => {
+				let info = System::account(&who);
+				debug!("TrustedGetter free_balance");
+				debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
+				debug!("Account free balance is {}", info.data.free);
+				Some(info.data.free.encode())
 			},
-			Getter::public(g) => match g {
-				PublicGetter::some_value => Some(42u32.encode()),
+
+			TrustedGetter::reserved_balance(who) => {
+				let info = System::account(&who);
+				debug!("TrustedGetter reserved_balance");
+				debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
+				debug!("Account reserved balance is {}", info.data.reserved);
+				Some(info.data.reserved.encode())
 			},
+			TrustedGetter::nonce(who) => {
+				let nonce = System::account_nonce(&who);
+				debug!("TrustedGetter nonce");
+				debug!("Account nonce is {}", nonce);
+				Some(nonce.encode())
+			},
+			/*
+			TrustedGetter::encointer_balance(who, currency_id) => {
+				let balance: BalanceEntry<BlockNumber> = pallet_encointer_balances::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::balance_entry(currency_id, who);
+				debug!("TrustedGetter encointer_balance");
+				Some(balance.encode())
+			},
+			TrustedGetter::ceremonies_participant_index(who, currency_id) => {
+				let ceremony_index = pallet_encointer_scheduler::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::current_ceremony_index();
+				let part: ParticipantIndexType = pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::participant_index(
+					(currency_id, ceremony_index),
+					AccountId::from(who),
+				);
+				Some(part.encode())
+			},
+			TrustedGetter::ceremonies_attestations(who, community_id) => {
+				let ceremony_index = pallet_encointer_scheduler::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::current_ceremony_index();
+				let attestation_index = pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::attestation_index(
+					(community_id, ceremony_index), who
+				);
+				let attestations = pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::attestation_registry(
+					(community_id, ceremony_index), attestation_index
+				);
+				Some(attestations.encode())
+			},
+			TrustedGetter::ceremonies_aggregated_account_data(who, community_id) => {
+				let aggregated_account_data = pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::get_aggregated_account_data(community_id, &who);
+				aggregated_account_data.personal.map(|p| p.encode())
+			},
+
+			 */
+			TrustedGetter::ceremonies_registered_bootstrappers(
+				who,
+				community_id,
+				ceremony_index,
+			) => {
+				debug!("TrustedGetter ceremonies_registered_bootstrappers");
+				//Block getter of confidential data if it is not the CeremonyMaster
+				if !is_ceremony_master(who) {
+					return None
+				}
+				let mut participants: Vec<AccountId> = Vec::new();
+
+				let num_registered_bootstrappers = pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::bootstrapper_count((
+					community_id,
+					ceremony_index,
+				));
+				debug!("found {} bootstrappers ", num_registered_bootstrappers);
+				if num_registered_bootstrappers < 1 {
+					return None
+				}
+
+				for i in 0..num_registered_bootstrappers {
+					match pallet_encointer_ceremonies::Pallet::<
+						ita_sgx_runtime::Runtime,
+					>::bootstrapper_registry(
+						(community_id, ceremony_index), i + 1,
+					) {
+						Some(b) => {
+							participants.push(b.clone());
+						}
+						_ => { warn!("no bootstrapper for {}, {}, {}", community_id, ceremony_index, i+1) }
+					};
+				}
+				Some(participants.encode())
+			},
+			TrustedGetter::ceremonies_registered_reputables(who, community_id, ceremony_index) => {
+				debug!("TrustedGetter ceremonies_registered_reputables");
+				//Block getter of confidential data if it is not the CeremonyMaster
+				if !is_ceremony_master(who) {
+					return None
+				}
+
+				let mut participants: Vec<AccountId> = Vec::new();
+
+				let num_registered_reputables = pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::reputable_count((community_id, ceremony_index));
+				debug!("found {} reputables ", num_registered_reputables);
+				if num_registered_reputables < 1 {
+					return None
+				}
+
+				for i in 0..num_registered_reputables {
+					match pallet_encointer_ceremonies::Pallet::<
+						ita_sgx_runtime::Runtime,
+					>::reputable_registry(
+						(community_id, ceremony_index), i + 1,
+					) {
+						Some(b) => {
+							participants.push(b.clone());
+						}
+						_ => { warn!("no reputable for {}, {}, {}", community_id, ceremony_index, i+1) }
+					};
+				}
+				Some(participants.encode())
+			},
+			TrustedGetter::ceremonies_registered_endorsees(who, community_id, ceremony_index) => {
+				debug!("TrustedGetter ceremonies_registered_endorsees");
+				//Block getter of confidential data if it is not the CeremonyMaster
+				if !is_ceremony_master(who) {
+					return None
+				}
+
+				let mut participants: Vec<AccountId> = Vec::new();
+
+				let num_registered_endorsees = pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::endorsee_count((community_id, ceremony_index));
+				debug!("found {} endorsees ", num_registered_endorsees);
+				if num_registered_endorsees < 1 {
+					return None
+				}
+
+				for i in 0..num_registered_endorsees {
+					match pallet_encointer_ceremonies::Pallet::<
+						ita_sgx_runtime::Runtime,
+					>::endorsee_registry(
+						(community_id, ceremony_index), i + 1,
+					) {
+						Some(b) => {
+							participants.push(b.clone());
+						}
+						_ => { warn!("no endorsee for {}, {}, {}", community_id, ceremony_index, i+1) }
+					};
+				}
+				Some(participants.encode())
+			},
+			TrustedGetter::ceremonies_registered_newbies(who, community_id, ceremony_index) => {
+				debug!("TrustedGetter ceremonies_registered_newbies");
+				//Block getter of confidential data if it is not the CeremonyMaster
+				if !is_ceremony_master(who) {
+					return None
+				}
+
+				let mut participants: Vec<AccountId> = Vec::new();
+
+				let num_registered_newbies = pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::newbie_count((community_id, ceremony_index));
+				debug!("found {} newbies ", num_registered_newbies);
+				if num_registered_newbies < 1 {
+					return None
+				}
+
+				for i in 0..num_registered_newbies {
+					match pallet_encointer_ceremonies::Pallet::<
+						ita_sgx_runtime::Runtime,
+					>::newbie_registry(
+						(community_id, ceremony_index), i + 1,
+					) {
+						Some(b) => {
+							participants.push(b.clone());
+						}
+						_ => { warn!("no newbie for {}, {}, {}", community_id, ceremony_index, i+1) }
+					};
+				}
+				Some(participants.encode())
+			},
+			/*
+			TrustedGetter::ceremonies_meetups(who, community_id) => {
+				//Master check
+			},
+			TrustedGetter::ceremonies_attestees(who, community_id) => {
+				//Master check
+			},
+
+			 */
+			#[cfg(feature = "evm")]
+			TrustedGetter::evm_nonce(who) => {
+				let evm_account = get_evm_account(&who);
+				let evm_account = HashedAddressMapping::into_account_id(evm_account);
+				let nonce = System::account_nonce(&evm_account);
+				debug!("TrustedGetter evm_nonce");
+				debug!("Account nonce is {}", nonce);
+				Some(nonce.encode())
+			},
+			#[cfg(feature = "evm")]
+			TrustedGetter::evm_account_codes(_who, evm_account) =>
+			// TODO: This probably needs some security check if who == evm_account (or assosciated)
+				if let Some(info) = get_evm_account_codes(&evm_account) {
+					debug!("TrustedGetter Evm Account Codes");
+					debug!("AccountCodes for {} is {:?}", evm_account, info);
+					Some(info) // TOOD: encoded?
+				} else {
+					None
+				},
+			#[cfg(feature = "evm")]
+			TrustedGetter::evm_account_storages(_who, evm_account, index) =>
+			// TODO: This probably needs some security check if who == evm_account (or assosciated)
+				if let Some(value) = get_evm_account_storages(&evm_account, &index) {
+					debug!("TrustedGetter Evm Account Storages");
+					debug!("AccountStorages for {} is {:?}", evm_account, value);
+					Some(value.encode())
+				} else {
+					None
+				},
+		}
+	}
+
+	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
+		Vec::new()
+	}
+}
+
+impl ExecuteGetter for PublicGetter {
+	fn execute(self) -> Option<Vec<u8>> {
+		match self {
+			PublicGetter::some_value => Some(42u32.encode()),
 		}
 	}
 
