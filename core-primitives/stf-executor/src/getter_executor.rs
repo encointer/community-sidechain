@@ -106,7 +106,7 @@ mod tests {
 	}
 
 	#[test]
-	fn executing_public_getter_gives_error() {
+	fn executing_public_getter_works() {
 		let test_state = 23489u64;
 		let state_observer = Arc::new(TestStateObserver::new(test_state));
 		let getter_executor = TestGetterExecutor::new(state_observer);
