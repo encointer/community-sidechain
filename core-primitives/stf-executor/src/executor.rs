@@ -201,7 +201,7 @@ where
 					Some(encoded_next_ceremony_phase) => {
 						Stf::update_ceremony_phase(
 							&mut state,
-							&mut encoded_next_ceremony_phase.as_slice(),
+							encoded_next_ceremony_phase.as_slice(),
 						);
 					},
 					_ => {
