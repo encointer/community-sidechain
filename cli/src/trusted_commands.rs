@@ -19,7 +19,9 @@ use crate::{benchmark::BenchmarkCommands, ceremonies::CeremoniesCommands, Cli};
 
 #[cfg(feature = "evm")]
 use crate::evm::EvmCommands;
-use crate::trusted_base_cli::TrustedBaseCli;
+use crate::{
+	trusted_base_cli::TrustedBaseCli, trusted_encointer_base_cli::TrustedEncointerBaseCli,
+};
 
 #[derive(Args)]
 pub struct TrustedArgs {
@@ -51,6 +53,9 @@ pub enum TrustedCommands {
 	#[clap(flatten)]
 	CeremoniesCommands(CeremoniesCommands),
 
+	#[clap(flatten)]
+	EncointerBaseTrusted(TrustedEncointerBaseCli),
+
 	#[cfg(feature = "evm")]
 	#[clap(flatten)]
 	EvmCommands(EvmCommands),
@@ -66,6 +71,8 @@ impl TrustedArgs {
 			TrustedCommands::Benchmark(benchmark_commands) => benchmark_commands.run(cli, self),
 			TrustedCommands::CeremoniesCommands(ceremonies_commands) =>
 				ceremonies_commands.run(cli, self),
+			TrustedCommands::EncointerBaseTrusted(encointer_base_cmd) =>
+				encointer_base_cmd.run(cli, self),
 			#[cfg(feature = "evm")]
 			TrustedCommands::EvmCommands(evm_commands) => evm_commands.run(cli, self),
 		}

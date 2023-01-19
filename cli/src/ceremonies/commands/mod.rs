@@ -16,6 +16,7 @@
 */
 
 pub mod ceremonies_command_utils;
+pub mod list_meetups;
 pub mod list_participants;
 pub mod register_participant;
 pub mod upgrade_registration;

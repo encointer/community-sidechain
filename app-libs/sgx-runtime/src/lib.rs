@@ -76,6 +76,7 @@ pub use frame_support::{
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_encointer_balances::Call as EncointerBalancesCall;
 pub use pallet_encointer_ceremonies::Call as EncointerCeremoniesCall;
+pub use pallet_encointer_communities::Call as EncointerCommunitiesCall;
 pub use pallet_parentchain::Call as ParentchainCall;
 pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]

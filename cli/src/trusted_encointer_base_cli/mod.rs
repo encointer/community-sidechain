@@ -16,21 +16,21 @@
 */
 
 use crate::{
-	encointer_base_cli::commands::next_phase::NextPhaseCommand, trusted_commands::TrustedArgs, Cli,
+	trusted_commands::TrustedArgs,
+	trusted_encointer_base_cli::commands::make_community_private::MakeCommunityPrivateCommand, Cli,
 };
 
 mod commands;
 
 #[derive(Debug, clap::Subcommand)]
-pub enum EncointerBaseCli {
-	/// Manually transition to next phase
-	NextPhase(NextPhaseCommand),
+pub enum TrustedEncointerBaseCli {
+	MakeCommunityPrivate(MakeCommunityPrivateCommand),
 }
 
-impl EncointerBaseCli {
-	pub fn run(&self, cli: &Cli) {
+impl TrustedEncointerBaseCli {
+	pub fn run(&self, cli: &Cli, trusted_args: &TrustedArgs) {
 		match self {
-			EncointerBaseCli::NextPhase(cmd) => cmd.run(cli),
+			TrustedEncointerBaseCli::MakeCommunityPrivate(cmd) => cmd.run(cli, trusted_args),
 		}
 	}
 }

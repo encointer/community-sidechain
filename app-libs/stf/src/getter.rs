@@ -17,7 +17,10 @@
 
 use crate::{AccountId, KeyPair, Signature};
 use codec::{Decode, Encode};
-use encointer_primitives::{communities::CommunityIdentifier, scheduler::CeremonyIndexType};
+use encointer_primitives::{
+	ceremonies::ParticipantIndexType, communities::CommunityIdentifier,
+	scheduler::CeremonyIndexType,
+};
 use ita_sgx_runtime::System;
 use itp_stf_interface::ExecuteGetter;
 use itp_utils::stringify::account_id_to_string;
@@ -33,6 +36,7 @@ use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account
 
 use crate::encointer_helpers::is_ceremony_master;
 
+use itp_storage::{storage_map_key, storage_value_key, StorageHasher};
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256};
 
@@ -59,13 +63,16 @@ impl From<TrustedGetterSigned> for Getter {
 #[allow(non_camel_case_types)]
 pub enum PublicGetter {
 	some_value,
+	ceremonies_assignment_counts(CommunityIdentifier, CeremonyIndexType),
+	ceremonies_meetup_count(CommunityIdentifier, CeremonyIndexType),
+	ceremonies_meetup_time_offset(),
+	ceremonies_registered_bootstrappers_count(CommunityIdentifier, CeremonyIndexType),
+	ceremonies_registered_reputables_count(CommunityIdentifier, CeremonyIndexType),
+	ceremonies_registered_endorsee_count(CommunityIdentifier, CeremonyIndexType),
+	ceremonies_registered_newbies_count(CommunityIdentifier, CeremonyIndexType),
+	ceremonies_registered_endorsees_count(CommunityIdentifier, CeremonyIndexType),
 	/*
 	   encointer_total_issuance(CommunityIdentifier),
-	   ceremonies_registered_bootstrappers_count(CommunityIdentifier),
-	   ceremonies_registered_reputables_count(CommunityIdentifier),
-	   ceremonies_registered_endorsees_count(CommunityIdentifier),
-	   ceremonies_registered_newbies_count(CommunityIdentifier),
-	   ceremonies_meetup_count(CommunityIdentifier),
 	   ceremonies_reward(CommunityIdentifier),
 	   ceremonies_location_tolerance(CommunityIdentifier),
 	   ceremonies_time_tolerance(CommunityIdentifier),
@@ -82,12 +89,39 @@ pub enum TrustedGetter {
 	//encointer_balance(AccountId, CommunityIdentifier),
 	//ceremonies_participant_index(AccountId, CommunityIdentifier),
 	//Not public : ceremonies_meetup_index(AccountId, CommunityIdentifier),
+	ceremonies_aggregated_account_data(AccountId, CommunityIdentifier, CeremonyIndexType),
+	ceremonies_assignments(AccountId, CommunityIdentifier, CeremonyIndexType),
+	//ceremonies_meetup_locations(AccountId, CommunityIdentifier, CeremonyIndexType, MeetupIndexType),
 	//ceremonies_reputations(AccountId, CommunityIdentifier),
 	//ceremonies_attestations(AccountId, CommunityIdentifier),
-	//ceremonies_aggregated_account_data(AccountId, CommunityIdentifier),
+	//ceremonies_participant_reputation(AccountId, CommunityIdentifier, CeremonyIndexType),
+	ceremonies_registered_bootstrapper(
+		AccountId,
+		CommunityIdentifier,
+		CeremonyIndexType,
+		ParticipantIndexType,
+	),
 	ceremonies_registered_bootstrappers(AccountId, CommunityIdentifier, CeremonyIndexType),
+	ceremonies_registered_reputable(
+		AccountId,
+		CommunityIdentifier,
+		CeremonyIndexType,
+		ParticipantIndexType,
+	),
 	ceremonies_registered_reputables(AccountId, CommunityIdentifier, CeremonyIndexType),
+	ceremonies_registered_endorsee(
+		AccountId,
+		CommunityIdentifier,
+		CeremonyIndexType,
+		ParticipantIndexType,
+	),
 	ceremonies_registered_endorsees(AccountId, CommunityIdentifier, CeremonyIndexType),
+	ceremonies_registered_newbie(
+		AccountId,
+		CommunityIdentifier,
+		CeremonyIndexType,
+		ParticipantIndexType,
+	),
 	ceremonies_registered_newbies(AccountId, CommunityIdentifier, CeremonyIndexType),
 	//from ceremonies_aggregated_account_data: ceremonies_meetup_time_and_location(AccountId, CommunityIdentifier),
 	//from ceremonies_aggregated_account_data: ceremonies_registration(AccountId, CommunityIdentifier),
@@ -112,11 +146,21 @@ impl TrustedGetter {
 			//TrustedGetter::encointer_balance(sender_account, _) => sender_account,
 			//TrustedGetter::ceremonies_participant_index(sender_account, _) => sender_account,
 			//TrustedGetter::ceremonies_attestations(sender_account, _) => sender_account,
-			//TrustedGetter::ceremonies_aggregated_account_data(sender_account, _) => sender_account,
+			TrustedGetter::ceremonies_aggregated_account_data(sender_account, _, _) =>
+				sender_account,
+			TrustedGetter::ceremonies_assignments(sender_account, _, _) => sender_account,
+			//TrustedGetter::ceremonies_meetup_locations(sender_account, _, _, _) => sender_account,
+			TrustedGetter::ceremonies_registered_bootstrapper(sender_account, _, _, _) =>
+				sender_account,
 			TrustedGetter::ceremonies_registered_bootstrappers(sender_account, _, _) =>
 				sender_account,
+			TrustedGetter::ceremonies_registered_reputable(sender_account, _, _, _) =>
+				sender_account,
 			TrustedGetter::ceremonies_registered_reputables(sender_account, _, _) => sender_account,
+			TrustedGetter::ceremonies_registered_endorsee(sender_account, _, _, _) =>
+				sender_account,
 			TrustedGetter::ceremonies_registered_endorsees(sender_account, _, _) => sender_account,
+			TrustedGetter::ceremonies_registered_newbie(sender_account, _, _, _) => sender_account,
 			TrustedGetter::ceremonies_registered_newbies(sender_account, _, _) => sender_account,
 			//TrustedGetter::ceremonies_meetups(sender_account, _) => sender_account,
 			//TrustedGetter::ceremonies_attestees(sender_account, _) => sender_account,
@@ -228,14 +272,97 @@ impl ExecuteGetter for TrustedGetterSigned {
 				);
 				Some(attestations.encode())
 			},
-			TrustedGetter::ceremonies_aggregated_account_data(who, community_id) => {
+			 */
+			TrustedGetter::ceremonies_aggregated_account_data(
+				who,
+				community_id,
+				_ceremony_index,
+			) => {
+				error!("TrustedGetter ceremonies_aggregated_account_data");
 				let aggregated_account_data = pallet_encointer_ceremonies::Pallet::<
 					ita_sgx_runtime::Runtime,
 				>::get_aggregated_account_data(community_id, &who);
-				aggregated_account_data.personal.map(|p| p.encode())
+				//aggregated_account_data.personal.map(|p| p.encode())
+				Some(aggregated_account_data.encode())
 			},
 
-			 */
+			/*
+						TrustedGetter::ceremonies_meetup_locations(
+							who,
+							community_id,
+							ceremony_index,
+							meetup_index,
+						) => {
+							error!("TrustedGetter ceremonies_meetup_locations");
+							//Block getter of confidential data if it is not the CeremonyMaster
+							if !is_ceremony_master(who) {
+								return None
+							}
+
+							let locations : Vec<Location> = pallet_encointer_communities:Pallet::<ita_sgx_runtime::Runtime>::locations();
+
+							let num_assignments = pallet_encointer_ceremonies::Pallet::<
+								ita_sgx_runtime::Runtime,
+							>::assignment_countst((
+								community_id,
+								ceremony_index,
+							));
+							error!("found {} assignments ", num_assignments);
+							if num_assignments < 1 {
+								return None
+							}
+
+							let location_assignment_params = match pallet_encointer_ceremonies::Pallet::<ita_sgx_runtime::Runtime>::assignments((
+									community_id,
+									ceremony_index,
+								)).locations;
+
+
+							let location_assignements_params = assignment.
+
+							Some(assignments.encode())
+
+						},
+			*/
+			TrustedGetter::ceremonies_assignments(who, community_id, ceremony_index) => {
+				error!("TrustedGetter ceremonies_assignments");
+				//Block getter of confidential data if it is not the CeremonyMaster
+				if !is_ceremony_master(who) {
+					error!("TrustedGetter ceremonies_assignments, return: No master");
+					return None
+				}
+				let assignments =
+					pallet_encointer_ceremonies::Pallet::<ita_sgx_runtime::Runtime>::assignments((
+						community_id,
+						ceremony_index,
+					));
+				Some(assignments.encode())
+			},
+			TrustedGetter::ceremonies_registered_bootstrapper(
+				who,
+				community_id,
+				ceremony_index,
+				participant_index_type,
+			) => {
+				debug!("TrustedGetter ceremonies_registered_bootstrapper");
+				//Block getter of confidential data if it is not the CeremonyMaster
+				if !is_ceremony_master(who) {
+					return None
+				}
+				match pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::bootstrapper_registry(
+					(community_id, ceremony_index), &participant_index_type
+				) {
+					Some(b) => {
+						Some(b.encode())
+					},
+					_ => {
+						warn!("no bootstrapper for {}, {}, {}", community_id, ceremony_index, participant_index_type);
+						None
+					},
+				}
+			},
 			TrustedGetter::ceremonies_registered_bootstrappers(
 				who,
 				community_id,
@@ -273,6 +400,31 @@ impl ExecuteGetter for TrustedGetterSigned {
 				}
 				Some(participants.encode())
 			},
+			TrustedGetter::ceremonies_registered_reputable(
+				who,
+				community_id,
+				ceremony_index,
+				participant_index_type,
+			) => {
+				debug!("TrustedGetter ceremonies_registered_reputable");
+				//Block getter of confidential data if it is not the CeremonyMaster
+				if !is_ceremony_master(who) {
+					return None
+				}
+				match pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::reputable_registry(
+					(community_id, ceremony_index), &participant_index_type
+				) {
+					Some(r) => {
+						Some(r.encode())
+					},
+					_ => {
+						warn!("no reputable for {}, {}, {}", community_id, ceremony_index, participant_index_type);
+						None
+					},
+				}
+			},
 			TrustedGetter::ceremonies_registered_reputables(who, community_id, ceremony_index) => {
 				debug!("TrustedGetter ceremonies_registered_reputables");
 				//Block getter of confidential data if it is not the CeremonyMaster
@@ -299,10 +451,35 @@ impl ExecuteGetter for TrustedGetterSigned {
 						Some(b) => {
 							participants.push(b.clone());
 						}
-						_ => { warn!("no reputable for {}, {}, {}", community_id, ceremony_index, i+1) }
+						_ => { warn!("no reputable for {}, {}, {}", community_id, ceremony_index, i+1); }
 					};
 				}
 				Some(participants.encode())
+			},
+			TrustedGetter::ceremonies_registered_endorsee(
+				who,
+				community_id,
+				ceremony_index,
+				participant_index_type,
+			) => {
+				debug!("TrustedGetter ceremonies_registered_endorsee");
+				//Block getter of confidential data if it is not the CeremonyMaster
+				if !is_ceremony_master(who) {
+					return None
+				}
+				match pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::endorsee_registry(
+					(community_id, ceremony_index), &participant_index_type
+				) {
+					Some(e) => {
+						Some(e.encode())
+					},
+					_ => {
+						warn!("no endorsee for {}, {}, {}", community_id, ceremony_index, participant_index_type);
+						None
+					},
+				}
 			},
 			TrustedGetter::ceremonies_registered_endorsees(who, community_id, ceremony_index) => {
 				debug!("TrustedGetter ceremonies_registered_endorsees");
@@ -330,10 +507,35 @@ impl ExecuteGetter for TrustedGetterSigned {
 						Some(b) => {
 							participants.push(b.clone());
 						}
-						_ => { warn!("no endorsee for {}, {}, {}", community_id, ceremony_index, i+1) }
+						_ => { warn!("no endorsee for {}, {}, {}", community_id, ceremony_index, i+1); }
 					};
 				}
 				Some(participants.encode())
+			},
+			TrustedGetter::ceremonies_registered_newbie(
+				who,
+				community_id,
+				ceremony_index,
+				participant_index_type,
+			) => {
+				debug!("TrustedGetter ceremonies_registered_newbie");
+				//Block getter of confidential data if it is not the CeremonyMaster
+				if !is_ceremony_master(who) {
+					return None
+				}
+				match pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::newbie_registry(
+					(community_id, ceremony_index), &participant_index_type
+				) {
+					Some(e) => {
+						Some(e.encode())
+					},
+					_ => {
+						warn!("no newbie for {}, {}, {}", community_id, ceremony_index, participant_index_type);
+						None
+					},
+				}
 			},
 			TrustedGetter::ceremonies_registered_newbies(who, community_id, ceremony_index) => {
 				debug!("TrustedGetter ceremonies_registered_newbies");
@@ -361,7 +563,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 						Some(b) => {
 							participants.push(b.clone());
 						}
-						_ => { warn!("no newbie for {}, {}, {}", community_id, ceremony_index, i+1) }
+						_ => { warn!("no newbie for {}, {}, {}", community_id, ceremony_index, i+1); }
 					};
 				}
 				Some(participants.encode())
@@ -408,7 +610,29 @@ impl ExecuteGetter for TrustedGetterSigned {
 	}
 
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		Vec::new()
+		let mut key_hashes = Vec::new();
+		match self.getter {
+			TrustedGetter::ceremonies_aggregated_account_data(
+				_,
+				_community_id,
+				_ceremony_index,
+			) => {
+				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
+				let current_phase =
+					pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase(); // updated im block import
+				key_hashes.push(storage_map_key(
+					"EncointerScheduler",
+					"PhaseDuration",
+					&current_phase,
+					&StorageHasher::Blake2_128Concat,
+				));
+				key_hashes.push(storage_value_key("EncointerScheduler", " NextPhaseTimestamp"));
+			},
+			_ => {
+				debug!("No storage updates needed...");
+			},
+		};
+		key_hashes
 	}
 }
 
@@ -416,6 +640,68 @@ impl ExecuteGetter for PublicGetter {
 	fn execute(self) -> Option<Vec<u8>> {
 		match self {
 			PublicGetter::some_value => Some(42u32.encode()),
+			PublicGetter::ceremonies_assignment_counts(community_id, ceremony_index) => {
+				error!("PublicGetter ceremonies_assignment_counts");
+				let count = pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::assignment_counts((community_id, ceremony_index));
+				Some(count.encode())
+			},
+			PublicGetter::ceremonies_meetup_count(community_id, ceremony_index) => {
+				error!("PublicGetter ceremonies_meetup_count");
+				let count =
+					pallet_encointer_ceremonies::Pallet::<ita_sgx_runtime::Runtime>::meetup_count(
+						(community_id, ceremony_index),
+					);
+				Some(count.encode())
+			},
+			PublicGetter::ceremonies_meetup_time_offset() => {
+				error!("PublicGetter ceremonies_meetup_time_offset");
+				let offset =
+					pallet_encointer_ceremonies::Pallet::<ita_sgx_runtime::Runtime>::meetup_time_offset(
+					);
+				Some(offset.encode())
+			},
+			PublicGetter::ceremonies_registered_bootstrappers_count(
+				community_id,
+				ceremony_index,
+			) => {
+				error!("PublicGetter ceremonies_registered_bootstrappers_count");
+				let count = pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::bootstrapper_count((community_id, ceremony_index));
+				Some(count.encode())
+			},
+			PublicGetter::ceremonies_registered_reputables_count(community_id, ceremony_index) => {
+				error!("PublicGetter ceremonies_registered_reputables_count");
+				let count = pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::reputable_count((community_id, ceremony_index));
+				Some(count.encode())
+			},
+			PublicGetter::ceremonies_registered_endorsee_count(community_id, ceremony_index) => {
+				error!("PublicGetter ceremonies_registered_endorsee_count");
+				let count =
+					pallet_encointer_ceremonies::Pallet::<ita_sgx_runtime::Runtime>::endorsee_count(
+						(community_id, ceremony_index),
+					);
+				Some(count.encode())
+			},
+			PublicGetter::ceremonies_registered_newbies_count(community_id, ceremony_index) => {
+				error!("PublicGetter ceremonies_registered_newbies_count");
+				let count =
+					pallet_encointer_ceremonies::Pallet::<ita_sgx_runtime::Runtime>::newbie_count(
+						(community_id, ceremony_index),
+					);
+				Some(count.encode())
+			},
+			PublicGetter::ceremonies_registered_endorsees_count(community_id, ceremony_index) => {
+				error!("PublicGetter ceremonies_registered_endorsees_count");
+				let count = pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::endorsees_count((community_id, ceremony_index));
+				Some(count.encode())
+			},
 		}
 	}
 
