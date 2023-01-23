@@ -52,7 +52,7 @@ impl ListMeetupsCommand {
 		let community_identifier = CommunityIdentifier::from_str(&self.community_id).unwrap();
 		let ceremony_index = api.get_current_ceremony_index(None).unwrap().unwrap();
 		error!(
-			"list all assigned meetups for community {} and ceremony {:?}",
+			"listing meetups for community {} and ceremony {:?}",
 			self.community_id, ceremony_index
 		);
 

@@ -177,21 +177,7 @@ pub fn get_ceremony_stats(
 			assigned,
 		);
 		error!("found {} meetup_participants: ", participants.len());
-		let mut registrations = vec![];
-
-		for participant in participants.into_iter() {
-			let registration = get_registration(
-				cli,
-				trusted_args,
-				arg_who,
-				community_identifier,
-				ceremony_index,
-				participant.clone(),
-			)?;
-			registrations.push((participant, registration))
-		}
-		error!("push meetup to meetups:");
-		meetups.push(Meetup::new(meetup_index, meetup_location, time, registrations))
+		meetups.push(Meetup::new(meetup_index, meetup_location, time, participants))
 	}
 
 	error!("generate stats with {} meetups", meetups.len());
@@ -296,7 +282,7 @@ fn get_meetup_participants(
 	meetup_count: MeetupIndexType,
 	assignment: Assignment,
 	assigned: AssignmentCount,
-) -> Vec<AccountId> {
+) -> Vec<(AccountId, ParticipantType)> {
 	let meetup_index_zero_based = meetup_index - 1;
 	if meetup_index_zero_based > meetup_count {
 		error!(
@@ -324,7 +310,34 @@ fn get_meetup_participants(
 			&assigned,
 		)
 	});
-	bootstrappers_reputables.collect()
+
+	let endorsees = assignment_fn_inverse(
+		meetup_index_zero_based,
+		assignment.endorsees,
+		meetup_count,
+		assigned.endorsees,
+	)
+	.unwrap_or_default()
+	.into_iter()
+	.filter(|p| p < &assigned.endorsees)
+	.filter_map(|p| {
+		get_endorsee(cli, trusted_args, arg_who, community_identifier, ceremony_index, p + 1)
+	});
+
+	let newbies = assignment_fn_inverse(
+		meetup_index_zero_based,
+		assignment.newbies,
+		meetup_count,
+		assigned.newbies,
+	)
+	.unwrap_or_default()
+	.into_iter()
+	.filter(|p| p < &assigned.newbies)
+	.filter_map(|p| {
+		get_newbie(cli, trusted_args, arg_who, community_identifier, ceremony_index, p + 1)
+	});
+
+	bootstrappers_reputables.chain(endorsees).chain(newbies).collect()
 }
 
 fn get_bootstrapper_or_reputable(
@@ -335,7 +348,7 @@ fn get_bootstrapper_or_reputable(
 	ceremony_index: CeremonyIndexType,
 	p_index: ParticipantIndexType,
 	assigned: &AssignmentCount,
-) -> Option<AccountId> {
+) -> Option<(AccountId, ParticipantType)> {
 	if p_index < assigned.bootstrappers {
 		return get_bootstrapper(
 			cli,
@@ -365,7 +378,7 @@ fn get_bootstrapper(
 	community_identifier: CommunityIdentifier,
 	ceremony_index: CeremonyIndexType,
 	participant_index_type: ParticipantIndexType,
-) -> Option<AccountId> {
+) -> Option<(AccountId, ParticipantType)> {
 	let who = get_pair_from_str(trusted_args, arg_who);
 	let top: TrustedOperation = TrustedGetter::ceremonies_registered_bootstrapper(
 		who.public().into(),
@@ -376,7 +389,10 @@ fn get_bootstrapper(
 	.sign(&KeyPair::Sr25519(who.clone()))
 	.into();
 	let bootstrapper = perform_trusted_operation(cli, trusted_args, &top);
-	decode_participant(bootstrapper)
+	match decode_participant(bootstrapper) {
+		Some(p) => Some((p, ParticipantType::Bootstrapper)),
+		None => None,
+	}
 }
 
 fn get_reputable(
@@ -386,7 +402,7 @@ fn get_reputable(
 	community_identifier: CommunityIdentifier,
 	ceremony_index: CeremonyIndexType,
 	participant_index_type: ParticipantIndexType,
-) -> Option<AccountId> {
+) -> Option<(AccountId, ParticipantType)> {
 	let who = get_pair_from_str(trusted_args, arg_who);
 	let top: TrustedOperation = TrustedGetter::ceremonies_registered_reputable(
 		who.public().into(),
@@ -397,7 +413,58 @@ fn get_reputable(
 	.sign(&KeyPair::Sr25519(who.clone()))
 	.into();
 	let reputable = perform_trusted_operation(cli, trusted_args, &top);
-	decode_participant(reputable)
+	match decode_participant(reputable) {
+		Some(p) => Some((p, ParticipantType::Reputable)),
+		None => None,
+	}
+}
+
+fn get_endorsee(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	arg_who: &str,
+	community_identifier: CommunityIdentifier,
+	ceremony_index: CeremonyIndexType,
+	participant_index_type: ParticipantIndexType,
+) -> Option<(AccountId, ParticipantType)> {
+	let who = get_pair_from_str(trusted_args, arg_who);
+	let top: TrustedOperation = TrustedGetter::ceremonies_registered_endorsee(
+		who.public().into(),
+		community_identifier,
+		ceremony_index,
+		participant_index_type,
+	)
+	.sign(&KeyPair::Sr25519(who.clone()))
+	.into();
+	let endorsee = perform_trusted_operation(cli, trusted_args, &top);
+	match decode_participant(endorsee) {
+		Some(p) => Some((p, ParticipantType::Endorsee)),
+		None => None,
+	}
+}
+
+fn get_newbie(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	arg_who: &str,
+	community_identifier: CommunityIdentifier,
+	ceremony_index: CeremonyIndexType,
+	participant_index_type: ParticipantIndexType,
+) -> Option<(AccountId, ParticipantType)> {
+	let who = get_pair_from_str(trusted_args, arg_who);
+	let top: TrustedOperation = TrustedGetter::ceremonies_registered_newbie(
+		who.public().into(),
+		community_identifier,
+		ceremony_index,
+		participant_index_type,
+	)
+	.sign(&KeyPair::Sr25519(who.clone()))
+	.into();
+	let newbie = perform_trusted_operation(cli, trusted_args, &top);
+	match decode_participant(newbie) {
+		Some(p) => Some((p, ParticipantType::Newbie)),
+		None => None,
+	}
 }
 
 pub fn prove_attendance(
