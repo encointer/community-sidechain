@@ -16,7 +16,7 @@
 */
 
 use crate::{helpers::get_storage_value, AccountId};
-use encointer_primitives::scheduler::CeremonyPhaseType;
+use encointer_primitives::{communities::CommunityIdentifier, scheduler::CeremonyPhaseType};
 use frame_support::traits::EnsureOrigin;
 use itp_storage::storage_value_key;
 use itp_utils::stringify::account_id_to_string;
@@ -34,6 +34,24 @@ pub fn is_ceremony_master(account_id: AccountId) -> bool {
             false
         }
     }
+}
+
+pub fn is_private_community(community_identifier: &CommunityIdentifier) -> bool {
+	match private_community_ids() {
+		Some(cids) => cids.contains(community_identifier),
+		None => {
+			error!("no private community registered!");
+			false
+		},
+	}
+}
+
+pub fn private_community_ids_storage_key() -> Vec<u8> {
+	storage_value_key("EncointerCommunities", "CommunityIdentifiers")
+}
+
+pub fn private_community_ids() -> Option<Vec<CommunityIdentifier>> {
+	get_storage_value("EncointerCommunities", "CommunityIdentifiers")
 }
 
 pub fn current_ceremony_phase_storage_key() -> Vec<u8> {

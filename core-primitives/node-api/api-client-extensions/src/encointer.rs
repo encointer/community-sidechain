@@ -37,12 +37,6 @@ pub trait EncointerApi {
 		community_id: CommunityIdentifier,
 		at_block: Option<Hash>,
 	) -> Vec<AccountId>;
-	fn get_community_identifiers(&self, at_block: Option<Hash>) -> Vec<CommunityIdentifier>;
-	fn get_community_identifier(
-		&self,
-		geo_hash: GeoHash,
-		at_block: Option<Hash>,
-	) -> CommunityIdentifier;
 	fn get_current_ceremony_index(
 		&self,
 		at_block: Option<Hash>,
@@ -82,26 +76,6 @@ where
 	) -> Vec<AccountId> {
 		let result: Vec<AccountId> = self
 			.get_storage_map(COMMUNITIES, "Bootstrappers", community_id, at_block)
-			.unwrap()
-			.unwrap();
-		result
-	}
-
-	fn get_community_identifiers(&self, at_block: Option<Hash>) -> Vec<CommunityIdentifier> {
-		let cids: Vec<CommunityIdentifier> = self
-			.get_storage_value(COMMUNITIES, "CommunityIdentifiers", at_block)
-			.unwrap()
-			.expect("no community registered");
-		cids
-	}
-
-	fn get_community_identifier(
-		&self,
-		geo_hash: GeoHash,
-		at_block: Option<Hash>,
-	) -> CommunityIdentifier {
-		let result: CommunityIdentifier = self
-			.get_storage_map(COMMUNITIES, "CommunityIdentifiersByGeohash", geo_hash, at_block)
 			.unwrap()
 			.unwrap();
 		result

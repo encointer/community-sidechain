@@ -43,7 +43,9 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::{traits::Verify, MultiAddress};
 use std::{format, prelude::v1::*};
 
-use crate::encointer_helpers::is_ceremony_master;
+use crate::encointer_helpers::{
+	is_ceremony_master, is_private_community, private_community_ids_storage_key,
+};
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 
@@ -385,11 +387,17 @@ impl ExecuteCall for TrustedCallSigned {
 			TrustedCall::ceremonies_register_participant(who, cid, proof) => {
 				let origin = ita_sgx_runtime::Origin::signed(who);
 
+				if !is_private_community(&cid) {
+					return Err(Self::Error::Dispatch(
+						"cannot register the participant: community is not private! ".to_string(),
+					))
+				}
+
 				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
 					== CeremonyPhaseType::Assigning
 				{
 					return Err(Self::Error::Dispatch(
-						"registering participants can only be done during registering or attesting phase"
+						"registering a participant can only be done during registering or attesting phase"
 							.to_string(),
 					))
 				}
@@ -413,18 +421,25 @@ impl ExecuteCall for TrustedCallSigned {
 				//Block getter of confidential data if it is not the CeremonyMaster
 				if !is_ceremony_master(who) {
 					return Err(Self::Error::Dispatch(
-						"communnity migration can only be done dby the ceremony master".to_string(),
+						"community migration can only be done by the ceremony master".to_string(),
 					))
 				}
 
+				if is_private_community(&cid) {
+					return Err(Self::Error::Dispatch(
+						"cannot migrate the community: it is already private! ".to_string(),
+					))
+				}
 				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
 					!= CeremonyPhaseType::Registering
 				{
 					return Err(Self::Error::Dispatch(
-						"registering participants can only be done during registering or attesting phase"
+						"community migration can only be done during the registering phase"
 							.to_string(),
 					))
 				}
+
+				sp_io::storage::append(&private_community_ids_storage_key(), cid.encode());
 
 				for location in locations {
 					ita_sgx_runtime::EncointerCommunitiesCall::<Runtime>::add_location {
@@ -447,14 +462,21 @@ impl ExecuteCall for TrustedCallSigned {
 				//Block getter of confidential data if it is not the CeremonyMaster
 				if !is_ceremony_master(who) {
 					return Err(Self::Error::Dispatch(
-						"communnity migration can only be done dby the ceremony master".to_string(),
+						"adding a location to a private community can only be done by the ceremony master".to_string(),
 					))
 				}
+
+				if !is_private_community(&cid) {
+					return Err(Self::Error::Dispatch(
+						"cannot add a location: community is not private! ".to_string(),
+					))
+				}
+
 				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
 					!= CeremonyPhaseType::Registering
 				{
 					return Err(Self::Error::Dispatch(
-						"registering participants can only be done during registering or attesting phase"
+						"adding a location can only be done during the registering phase"
 							.to_string(),
 					))
 				}
@@ -906,32 +928,9 @@ impl ExecuteCall for TrustedCallSigned {
 			 */
 			TrustedCall::ceremonies_register_participant(_, cid, _) => {
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
-				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
-				key_hashes.push(storage_map_key(
-					"EncointerCommunities",
-					"Bootstrappers",
-					&cid,
-					&StorageHasher::Blake2_128Concat,
-				));
-				key_hashes.push(storage_map_key(
-					"EncointerBalances",
-					"TotalIssuance",
-					&cid,
-					&StorageHasher::Blake2_128Concat,
-				));
-				//Needed by on_ceremony_phase_change. Do it when migration
-				//check update_inactivity_counters ?
-				key_hashes.push(storage_value_key("EncointerCeremonies", "ReputationLifetime"));
-
-				//To check if needed at start (migrate community)
-				//EncointerCommunities:new_community: CommunityMetadata, Locations,CommunityIdentifiersByGeohash
-				//EncointerCommunities: NominalIncome
-				//EncointerCeremonies Genesis:CeremonyReward, LocationTolerance,TimeTolerance, InactivityTimeout, EndorsementTicketsPerBootstrapper,
-				//EndorsementTicketsPerReputable,ReputationLifetime, MeetupTimeOffset
 			},
 			TrustedCall::ceremonies_migrate_to_private_community(_, cid, _) => {
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
-				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
 				key_hashes.push(storage_map_key(
 					"EncointerCommunities",
 					"NominalIncome",
@@ -968,9 +967,8 @@ impl ExecuteCall for TrustedCallSigned {
 				key_hashes.push(storage_value_key("EncointerCeremonies", "ReputationLifetime"));
 				key_hashes.push(storage_value_key("EncointerCeremonies", "MeetupTimeOffset"));
 			},
-			TrustedCall::communities_add_location(_, _, _) => {
-				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
-			},
+			TrustedCall::communities_add_location(_, _, _) =>
+				debug!("No storage updates needed..."),
 			/*
 			//get_aggregated_account_data ?
 			TrustedCall::ceremonies_attest_attendees(_, cid, _, ceremony_index, _) => {
