@@ -40,8 +40,8 @@ impl ListMeetupsCommand {
 
 		let community_identifier = CommunityIdentifier::from_str(&self.community_id).unwrap();
 		let ceremony_index = api.get_current_ceremony_index(None).unwrap().unwrap();
-		error!(
-			"listing meetups for community {} and ceremony {:?}",
+		info!(
+			"Listing meetups for community {} and ceremony {:?}",
 			self.community_id, ceremony_index
 		);
 
@@ -49,6 +49,9 @@ impl ListMeetupsCommand {
 			get_ceremony_stats(cli, trusted_args, &self.who, community_identifier, ceremony_index)
 				.unwrap();
 		let mut num_assignees = 0u64;
+		if stats.meetups.is_empty() {
+			println!("No meetup. Is the community private ?");
+		}
 		for meetup in stats.meetups.iter() {
 			println!(
 				"MeetupRegistry[({}, {}), {}] location is {:?}, {:?}",

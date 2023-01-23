@@ -46,17 +46,25 @@ impl MakeCommunityPrivateCommand {
 		let api = get_chain_api(cli);
 
 		let who = get_pair_from_str(trusted_args, &self.who);
-		error!("from ss58 is public {}", who.public().to_ss58check());
+		info!("who ss58 is {}", who.public().to_ss58check());
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
 
-		error!("community_id {}", self.community_id);
+		info!("community_id {}", self.community_id);
 
 		let cid = CommunityIdentifier::from_str(&self.community_id).unwrap();
 
 		//Update Locations
 		let locations = api.get_community_locations(cid).unwrap();
+		info!("{} locations to migrate: ", locations.len());
+
 		let nonce = get_layer_two_nonce!(who, cli, trusted_args);
+
+		println!(
+			"who {} send trusted call ceremonies_migrate_to_private_community {}",
+			who.public(),
+			cid,
+		);
 		let top = TrustedCall::ceremonies_migrate_to_private_community(
 			who.public().into(),
 			cid,
@@ -65,21 +73,6 @@ impl MakeCommunityPrivateCommand {
 		.sign(&KeyPair::Sr25519(who.clone()), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 		let _ = perform_trusted_operation(cli, trusted_args, &top).unwrap();
-
-		/*
-			   //Update Locations
-			   let locations = api.get_community_locations(cid).unwrap();
-			   for l in locations {
-				   let nonce = nonce + 1;
-				   let top = TrustedCall::communities_add_location(who.public().into(), cid, l)
-					   .sign(&KeyPair::Sr25519(who.clone()), nonce, &mrenclave, &shard)
-					   .into_trusted_operation(trusted_args.direct);
-
-				   let _ = perform_trusted_operation(cli, trusted_args, &top);
-				   error!("trusted call communities_add_location executed");
-			   }
-
-		*/
-		error!("trusted call ceremonies_migrate_to_private_community");
+		info!("trusted call ceremonies_migrate_to_private_community executed");
 	}
 }

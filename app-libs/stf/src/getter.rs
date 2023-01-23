@@ -285,45 +285,6 @@ impl ExecuteGetter for TrustedGetterSigned {
 				//aggregated_account_data.personal.map(|p| p.encode())
 				Some(aggregated_account_data.encode())
 			},
-
-			/*
-						TrustedGetter::ceremonies_meetup_locations(
-							who,
-							community_id,
-							ceremony_index,
-							meetup_index,
-						) => {
-							error!("TrustedGetter ceremonies_meetup_locations");
-							//Block getter of confidential data if it is not the CeremonyMaster
-							if !is_ceremony_master(who) {
-								return None
-							}
-
-							let locations : Vec<Location> = pallet_encointer_communities:Pallet::<ita_sgx_runtime::Runtime>::locations();
-
-							let num_assignments = pallet_encointer_ceremonies::Pallet::<
-								ita_sgx_runtime::Runtime,
-							>::assignment_countst((
-								community_id,
-								ceremony_index,
-							));
-							error!("found {} assignments ", num_assignments);
-							if num_assignments < 1 {
-								return None
-							}
-
-							let location_assignment_params = match pallet_encointer_ceremonies::Pallet::<ita_sgx_runtime::Runtime>::assignments((
-									community_id,
-									ceremony_index,
-								)).locations;
-
-
-							let location_assignements_params = assignment.
-
-							Some(assignments.encode())
-
-						},
-			*/
 			TrustedGetter::ceremonies_assignments(who, community_id, ceremony_index) => {
 				error!("TrustedGetter ceremonies_assignments");
 				//Block getter of confidential data if it is not the CeremonyMaster
@@ -641,14 +602,12 @@ impl ExecuteGetter for PublicGetter {
 		match self {
 			PublicGetter::some_value => Some(42u32.encode()),
 			PublicGetter::ceremonies_assignment_counts(community_id, ceremony_index) => {
-				error!("PublicGetter ceremonies_assignment_counts");
 				let count = pallet_encointer_ceremonies::Pallet::<
 					ita_sgx_runtime::Runtime,
 				>::assignment_counts((community_id, ceremony_index));
 				Some(count.encode())
 			},
 			PublicGetter::ceremonies_meetup_count(community_id, ceremony_index) => {
-				error!("PublicGetter ceremonies_meetup_count");
 				let count =
 					pallet_encointer_ceremonies::Pallet::<ita_sgx_runtime::Runtime>::meetup_count(
 						(community_id, ceremony_index),
@@ -656,7 +615,6 @@ impl ExecuteGetter for PublicGetter {
 				Some(count.encode())
 			},
 			PublicGetter::ceremonies_meetup_time_offset() => {
-				error!("PublicGetter ceremonies_meetup_time_offset");
 				let offset =
 					pallet_encointer_ceremonies::Pallet::<ita_sgx_runtime::Runtime>::meetup_time_offset(
 					);
@@ -666,21 +624,18 @@ impl ExecuteGetter for PublicGetter {
 				community_id,
 				ceremony_index,
 			) => {
-				error!("PublicGetter ceremonies_registered_bootstrappers_count");
 				let count = pallet_encointer_ceremonies::Pallet::<
 					ita_sgx_runtime::Runtime,
 				>::bootstrapper_count((community_id, ceremony_index));
 				Some(count.encode())
 			},
 			PublicGetter::ceremonies_registered_reputables_count(community_id, ceremony_index) => {
-				error!("PublicGetter ceremonies_registered_reputables_count");
 				let count = pallet_encointer_ceremonies::Pallet::<
 					ita_sgx_runtime::Runtime,
 				>::reputable_count((community_id, ceremony_index));
 				Some(count.encode())
 			},
 			PublicGetter::ceremonies_registered_endorsee_count(community_id, ceremony_index) => {
-				error!("PublicGetter ceremonies_registered_endorsee_count");
 				let count =
 					pallet_encointer_ceremonies::Pallet::<ita_sgx_runtime::Runtime>::endorsee_count(
 						(community_id, ceremony_index),
@@ -688,7 +643,6 @@ impl ExecuteGetter for PublicGetter {
 				Some(count.encode())
 			},
 			PublicGetter::ceremonies_registered_newbies_count(community_id, ceremony_index) => {
-				error!("PublicGetter ceremonies_registered_newbies_count");
 				let count =
 					pallet_encointer_ceremonies::Pallet::<ita_sgx_runtime::Runtime>::newbie_count(
 						(community_id, ceremony_index),
@@ -696,7 +650,6 @@ impl ExecuteGetter for PublicGetter {
 				Some(count.encode())
 			},
 			PublicGetter::ceremonies_registered_endorsees_count(community_id, ceremony_index) => {
-				error!("PublicGetter ceremonies_registered_endorsees_count");
 				let count = pallet_encointer_ceremonies::Pallet::<
 					ita_sgx_runtime::Runtime,
 				>::endorsees_count((community_id, ceremony_index));

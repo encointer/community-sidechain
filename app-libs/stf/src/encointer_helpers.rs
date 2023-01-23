@@ -39,10 +39,7 @@ pub fn is_ceremony_master(account_id: AccountId) -> bool {
 pub fn is_private_community(community_identifier: &CommunityIdentifier) -> bool {
 	match private_community_ids() {
 		Some(cids) => cids.contains(community_identifier),
-		None => {
-			error!("no private community registered!");
-			false
-		},
+		None => false,
 	}
 }
 

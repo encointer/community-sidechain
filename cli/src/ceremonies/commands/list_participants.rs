@@ -82,7 +82,10 @@ impl ListParticipantsCommand {
 		.into();
 		let newbies = perform_trusted_operation(cli, trusted_args, &top);
 
-		println!("Ceremony ({}) participants of community {} :", ceremony_index, self.community_id);
+		println!(
+			"Participants of community {} for ceremony {} :",
+			ceremony_index, self.community_id
+		);
 		println!("- Bootstrappers :");
 		list_participants(bootstrappers);
 		println!();

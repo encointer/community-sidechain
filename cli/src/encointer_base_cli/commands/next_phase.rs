@@ -20,6 +20,7 @@ use crate::{
 	Cli,
 };
 
+use log::*;
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use substrate_api_client::{compose_call, compose_extrinsic, UncheckedExtrinsicV4, XtStatus};
 
@@ -32,7 +33,7 @@ pub struct NextPhaseCommand {
 impl NextPhaseCommand {
 	pub(crate) fn run(&self, cli: &Cli) {
 		let from_account = get_pair_from_str(&self.from);
-		println!("from ss58 is {}", from_account.public().to_ss58check());
+		info!("from ss58 is {}", from_account.public().to_ss58check());
 
 		let api = get_chain_api(cli).set_signer(sr25519_core::Pair::from(from_account.clone()));
 
@@ -41,7 +42,7 @@ impl NextPhaseCommand {
 		let xt: UncheckedExtrinsicV4<_, _> =
 			compose_extrinsic!(api, "Sudo", "sudo", next_phase_call);
 		// send and watch extrinsic until finalized
-		println!("Master {} trigger manually next phase ", from_account.public().to_ss58check());
+		info!("Master {} trigger manually next phase ", from_account.public().to_ss58check());
 		let tx_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
 		println!("[+] Next Phase got finalized. Hash: {:?}\n", tx_hash);
 	}

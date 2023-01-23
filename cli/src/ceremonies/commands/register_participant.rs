@@ -51,11 +51,11 @@ impl RegisterParticipantCommand {
 
 		let who = get_pair_from_str(trusted_args, &self.who);
 		let accountid = get_accountid_from_str(&self.who);
-		debug!("from ss58 is public {}", who.public().to_ss58check());
+		info!("who ss58 is {}", who.public().to_ss58check());
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
 
-		debug!("community_id {}", self.community_id);
+		info!("community_id {}", self.community_id);
 
 		let cid = CommunityIdentifier::from_str(&self.community_id).unwrap();
 

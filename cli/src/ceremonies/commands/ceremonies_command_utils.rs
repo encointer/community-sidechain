@@ -89,7 +89,6 @@ pub fn get_ceremony_stats(
 	community_identifier: CommunityIdentifier,
 	ceremony_index: CeremonyIndexType,
 ) -> Option<CommunityCeremonyStats> {
-	error!("get_ceremony_stats in");
 	let api = get_chain_api(cli);
 	let who = get_pair_from_str(trusted_args, arg_who);
 
@@ -102,7 +101,7 @@ pub fn get_ceremony_stats(
 	.into();
 	let encoded_assignments = perform_trusted_operation(cli, trusted_args, &top);
 	let assignment = decode_assignments(encoded_assignments).unwrap_or_default();
-	error!("found assignment: bootstarppers_reputables.m{}", assignment.bootstrappers_reputables.m);
+	debug!("found assignment: bootstarppers_reputables.m{}", assignment.bootstrappers_reputables.m);
 
 	let top: TrustedOperation =
 		PublicGetter::ceremonies_meetup_count(community_identifier, ceremony_index).into();
@@ -112,7 +111,7 @@ pub fn get_ceremony_stats(
 		match MeetupIndexType::decode(&mut mcount.as_slice()) {
 			Ok(mc) => {
 				meetup_count = mc;
-				error!("found meetup_count: {}", meetup_count);
+				debug!("found meetup_count: {}", meetup_count);
 			},
 			Err(_) => {
 				error!("Could not decode the meetup count");
@@ -134,7 +133,7 @@ pub fn get_ceremony_stats(
 			},
 		}
 	} else {
-		println!("meetup time offset: unknown");
+		debug!("meetup time offset: unknown");
 	};
 
 	let top: TrustedOperation =
@@ -144,26 +143,24 @@ pub fn get_ceremony_stats(
 		match AssignmentCount::decode(&mut count.as_slice()) {
 			Ok(ac) => {
 				assigned = ac;
-				error!("found assignment_count: {}", assigned.get_number_of_participants());
+				debug!("found assignment_count: {}", assigned.get_number_of_participants());
 			},
 			Err(_) => {
 				error!("Could not decode the assignment count");
 			},
 		}
 	} else {
-		println!("assignment count: unknown");
+		debug!("assignment count: unknown");
 	};
 
 	let mut meetups = vec![];
 	for meetup_index in 1..=meetup_count {
-		error!("Check meetup {}", meetup_index);
 		let meetup_location = api
 			.get_meetup_locations(community_identifier, assignment, meetup_index)
 			.unwrap_or_default()
 			.unwrap_or_default();
 		let time = api.get_meetup_time(meetup_location, ONE_DAY, meetup_time_offset).unwrap_or(0);
 
-		error!("get meetup_participants: ");
 		//meetup participants
 		let participants = get_meetup_participants(
 			cli,
@@ -176,11 +173,9 @@ pub fn get_ceremony_stats(
 			assignment,
 			assigned,
 		);
-		error!("found {} meetup_participants: ", participants.len());
 		meetups.push(Meetup::new(meetup_index, meetup_location, time, participants))
 	}
 
-	error!("generate stats with {} meetups", meetups.len());
 	Some(CommunityCeremonyStats::new(
 		(community_identifier, ceremony_index),
 		assignment,

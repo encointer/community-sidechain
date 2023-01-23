@@ -261,7 +261,7 @@ where
 					if current_ceremony_phase.is_none()
 						|| decoded_next_ceremony_phase != current_ceremony_phase.unwrap()
 					{
-						error!(
+						info!(
 							"Current ceremony phase has changed: Phase is now {:?}",
 							next_ceremony_phase
 						);
