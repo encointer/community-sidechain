@@ -16,21 +16,12 @@
 */
 
 use crate::{
-	ceremonies::commands::ceremonies_command_utils::{
-		decode_assignments, get_ceremony_stats, list_participants,
-	},
-	command_utils::get_chain_api,
-	trusted_command_utils::get_pair_from_str,
-	trusted_commands::TrustedArgs,
-	trusted_operation::perform_trusted_operation,
-	Cli,
+	ceremonies::commands::ceremonies_command_utils::get_ceremony_stats,
+	command_utils::get_chain_api, trusted_commands::TrustedArgs, Cli,
 };
-use codec::Decode;
-use encointer_primitives::{ceremonies::MeetupIndexType, communities::CommunityIdentifier};
-use ita_stf::{KeyPair, PublicGetter, TrustedGetter, TrustedOperation};
+use encointer_primitives::communities::CommunityIdentifier;
 use itp_node_api::api_client::encointer::EncointerApi;
 use log::*;
-use sp_core::Pair;
 use std::str::FromStr;
 
 /// List all assigned meetups for current encointer ceremony and supplied community identifier  
@@ -46,8 +37,6 @@ pub struct ListMeetupsCommand {
 impl ListMeetupsCommand {
 	pub fn run(&self, cli: &Cli, trusted_args: &TrustedArgs) {
 		let api = get_chain_api(cli);
-
-		let who = get_pair_from_str(trusted_args, &self.who);
 
 		let community_identifier = CommunityIdentifier::from_str(&self.community_id).unwrap();
 		let ceremony_index = api.get_current_ceremony_index(None).unwrap().unwrap();

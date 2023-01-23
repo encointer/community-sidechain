@@ -18,7 +18,7 @@
 use crate::ApiResult;
 use encointer_primitives::{
 	ceremonies::{Assignment, MeetupIndexType, MeetupTimeOffsetType},
-	communities::{CommunityIdentifier, GeoHash, Location},
+	communities::{CommunityIdentifier, Location},
 	scheduler::{CeremonyIndexType, CeremonyPhaseType},
 };
 use itp_types::{AccountId, Moment};

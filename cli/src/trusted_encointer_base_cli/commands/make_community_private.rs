@@ -18,7 +18,7 @@
 use crate::{
 	command_utils::get_chain_api,
 	get_layer_two_nonce,
-	trusted_command_utils::{get_accountid_from_str, get_identifiers, get_pair_from_str},
+	trusted_command_utils::{get_identifiers, get_pair_from_str},
 	trusted_commands::TrustedArgs,
 	trusted_operation::perform_trusted_operation,
 	Cli,

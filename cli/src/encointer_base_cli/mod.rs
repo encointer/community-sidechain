@@ -15,9 +15,7 @@
 
 */
 
-use crate::{
-	encointer_base_cli::commands::next_phase::NextPhaseCommand, trusted_commands::TrustedArgs, Cli,
-};
+use crate::{encointer_base_cli::commands::next_phase::NextPhaseCommand, Cli};
 
 mod commands;
 

@@ -926,7 +926,7 @@ impl ExecuteCall for TrustedCallSigned {
 			| TrustedCall::ceremonies_upgrade_registration(_, cid, _)
 			| TrustedCall::ceremonies_unregister_participant(_, cid, _) => {
 			 */
-			TrustedCall::ceremonies_register_participant(_, cid, _) => {
+			TrustedCall::ceremonies_register_participant(_, _, _) => {
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
 			},
 			TrustedCall::ceremonies_migrate_to_private_community(_, cid, _) => {

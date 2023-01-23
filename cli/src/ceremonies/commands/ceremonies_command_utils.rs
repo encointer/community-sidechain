@@ -23,8 +23,8 @@ use codec::{Decode, Encode};
 use encointer_ceremonies_assignment::assignment_fn_inverse;
 use encointer_primitives::{
 	ceremonies::{
-		AggregatedAccountData, Assignment, AssignmentCount, CommunityCeremony, MeetupIndexType,
-		MeetupTimeOffsetType, ParticipantIndexType, ParticipantType, ProofOfAttendance,
+		Assignment, AssignmentCount, CommunityCeremony, MeetupIndexType, MeetupTimeOffsetType,
+		ParticipantIndexType, ParticipantType, ProofOfAttendance,
 	},
 	communities::{CommunityIdentifier, Location},
 	scheduler::CeremonyIndexType,
@@ -114,7 +114,7 @@ pub fn get_ceremony_stats(
 				meetup_count = mc;
 				error!("found meetup_count: {}", meetup_count);
 			},
-			Err(e) => {
+			Err(_) => {
 				error!("Could not decode the meetup count");
 			},
 		}
@@ -129,7 +129,7 @@ pub fn get_ceremony_stats(
 			Ok(o) => {
 				meetup_time_offset = o;
 			},
-			Err(e) => {
+			Err(_) => {
 				error!("Could not decode the meetup time offset");
 			},
 		}
@@ -146,7 +146,7 @@ pub fn get_ceremony_stats(
 				assigned = ac;
 				error!("found assignment_count: {}", assigned.get_number_of_participants());
 			},
-			Err(e) => {
+			Err(_) => {
 				error!("Could not decode the assignment count");
 			},
 		}
@@ -190,6 +190,7 @@ pub fn get_ceremony_stats(
 	))
 }
 
+/*
 fn get_aggregated_account_data(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
@@ -239,38 +240,7 @@ fn get_meetup_index(
 	}
 	None
 }
-
-fn get_registration(
-	cli: &Cli,
-	trusted_args: &TrustedArgs,
-	arg_who: &str,
-	community_identifier: CommunityIdentifier,
-	ceremony_index: CeremonyIndexType,
-	account_id: AccountId,
-) -> Option<ParticipantType> {
-	if let Some(account_data) = get_aggregated_account_data(
-		cli,
-		trusted_args,
-		arg_who,
-		community_identifier,
-		ceremony_index,
-		account_id.clone(),
-	) {
-		match account_data.personal {
-			Some(personal) => return Some(personal.participant_type),
-			None => {
-				println!(
-					"Participant {:?} is not registered for ceremony {} of community {}",
-					&account_id, ceremony_index, community_identifier
-				);
-				return None
-			},
-		};
-	} else {
-		error!("Could not get aggregated account data for {:?}", &account_id);
-	}
-	None
-}
+ */
 
 fn get_meetup_participants(
 	cli: &Cli,
@@ -496,6 +466,7 @@ pub fn list_participants(encoded_participants: Option<Vec<u8>>) {
 		},
 	};
 }
+/*
 pub fn decode_aggregated_account_data(
 	encoded_data: Option<Vec<u8>>,
 ) -> Option<AggregatedAccountData<AccountId, Moment>> {
@@ -508,6 +479,8 @@ pub fn decode_aggregated_account_data(
 		}
 	})
 }
+
+ */
 
 pub fn decode_participant(encoded_participant: Option<Vec<u8>>) -> Option<AccountId> {
 	encoded_participant.and_then(|p| {
