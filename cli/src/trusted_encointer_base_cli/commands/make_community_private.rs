@@ -31,7 +31,7 @@ use log::*;
 use sp_core::{crypto::Ss58Codec, Pair};
 use std::str::FromStr;
 
-/// Make community private. Can only be executed in Registering phase
+/// Make community private. Can only be called in registering phase by the ceremony master.
 #[derive(Debug, Clone, Parser)]
 pub struct MakeCommunityPrivateCommand {
 	/// Ceremony Master : sender's on-chain AccountId in ss58check format.

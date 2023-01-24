@@ -287,7 +287,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 			},
 			TrustedGetter::ceremonies_assignments(who, community_id, ceremony_index) => {
 				error!("TrustedGetter ceremonies_assignments");
-				//Block getter of confidential data if it is not the CeremonyMaster
+				// Block getter of confidential data if it is not the CeremonyMaster.
 				if !is_ceremony_master(who) {
 					error!("TrustedGetter ceremonies_assignments, return: No master");
 					return None
@@ -306,7 +306,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 				participant_index_type,
 			) => {
 				debug!("TrustedGetter ceremonies_registered_bootstrapper");
-				//Block getter of confidential data if it is not the CeremonyMaster
+				// Block getter of confidential data if it is not the CeremonyMaster.
 				if !is_ceremony_master(who) {
 					return None
 				}
@@ -330,7 +330,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 				ceremony_index,
 			) => {
 				debug!("TrustedGetter ceremonies_registered_bootstrappers");
-				//Block getter of confidential data if it is not the CeremonyMaster
+				// Block getter of confidential data if it is not the CeremonyMaster.
 				if !is_ceremony_master(who) {
 					return None
 				}
@@ -368,7 +368,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 				participant_index_type,
 			) => {
 				debug!("TrustedGetter ceremonies_registered_reputable");
-				//Block getter of confidential data if it is not the CeremonyMaster
+				// Block getter of confidential data if it is not the CeremonyMaster.
 				if !is_ceremony_master(who) {
 					return None
 				}
@@ -388,7 +388,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 			},
 			TrustedGetter::ceremonies_registered_reputables(who, community_id, ceremony_index) => {
 				debug!("TrustedGetter ceremonies_registered_reputables");
-				//Block getter of confidential data if it is not the CeremonyMaster
+				// Block getter of confidential data if it is not the CeremonyMaster.
 				if !is_ceremony_master(who) {
 					return None
 				}
@@ -424,7 +424,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 				participant_index_type,
 			) => {
 				debug!("TrustedGetter ceremonies_registered_endorsee");
-				//Block getter of confidential data if it is not the CeremonyMaster
+				// Block getter of confidential data if it is not the CeremonyMaster.
 				if !is_ceremony_master(who) {
 					return None
 				}
@@ -444,7 +444,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 			},
 			TrustedGetter::ceremonies_registered_endorsees(who, community_id, ceremony_index) => {
 				debug!("TrustedGetter ceremonies_registered_endorsees");
-				//Block getter of confidential data if it is not the CeremonyMaster
+				// Block getter of confidential data if it is not the CeremonyMaster.
 				if !is_ceremony_master(who) {
 					return None
 				}
@@ -480,7 +480,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 				participant_index_type,
 			) => {
 				debug!("TrustedGetter ceremonies_registered_newbie");
-				//Block getter of confidential data if it is not the CeremonyMaster
+				// Block getter of confidential data if it is not the CeremonyMaster.
 				if !is_ceremony_master(who) {
 					return None
 				}
@@ -500,7 +500,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 			},
 			TrustedGetter::ceremonies_registered_newbies(who, community_id, ceremony_index) => {
 				debug!("TrustedGetter ceremonies_registered_newbies");
-				//Block getter of confidential data if it is not the CeremonyMaster
+				// Block getter of confidential data if it is not the CeremonyMaster.
 				if !is_ceremony_master(who) {
 					return None
 				}

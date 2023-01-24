@@ -36,6 +36,7 @@ pub fn is_ceremony_master(account_id: AccountId) -> bool {
     }
 }
 
+/// For now, a community is private when its community identifier is stored in the communities pallet on the sidechain.
 pub fn is_private_community(community_identifier: &CommunityIdentifier) -> bool {
 	match private_community_ids() {
 		Some(cids) => cids.contains(community_identifier),

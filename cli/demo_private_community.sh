@@ -5,7 +5,7 @@ trap "echo The demo is terminated (SIGINT); exit 1" SIGINT
 trap "echo The demo is terminated (SIGTERM); exit 1" SIGTERM
 
 # Demo of private communities: ceremonies and balances are confidential
-# An Encointer community is created on chain
+# An Encointer community is first created on chain and then migrated to private
 #
 
 # setup:

@@ -23,8 +23,8 @@ use codec::{Decode, Encode};
 use encointer_ceremonies_assignment::assignment_fn_inverse;
 use encointer_primitives::{
 	ceremonies::{
-		Assignment, AssignmentCount, CommunityCeremony, MeetupIndexType, MeetupTimeOffsetType,
-		ParticipantIndexType, ParticipantType, ProofOfAttendance,
+		Assignment, AssignmentCount, CommunityCeremony, MeetupIndexType, ParticipantIndexType,
+		ParticipantType, ProofOfAttendance,
 	},
 	communities::{CommunityIdentifier, Location},
 	scheduler::CeremonyIndexType,
@@ -100,58 +100,21 @@ pub fn get_ceremony_stats(
 	.sign(&KeyPair::Sr25519(who.clone()))
 	.into();
 	let encoded_assignments = perform_trusted_operation(cli, trusted_args, &top);
-	let assignment = decode_assignments(encoded_assignments).unwrap_or_default();
-	debug!("found assignment: bootstarppers_reputables.m{}", assignment.bootstrappers_reputables.m);
+	let assignment = decode_to_option(encoded_assignments).unwrap_or_default();
 
 	let top: TrustedOperation =
 		PublicGetter::ceremonies_meetup_count(community_identifier, ceremony_index).into();
-
-	let mut meetup_count = MeetupIndexType::default();
-	if let Some(mcount) = perform_trusted_operation(cli, trusted_args, &top) {
-		match MeetupIndexType::decode(&mut mcount.as_slice()) {
-			Ok(mc) => {
-				meetup_count = mc;
-				debug!("found meetup_count: {}", meetup_count);
-			},
-			Err(_) => {
-				error!("Could not decode the meetup count");
-			},
-		}
-	} else {
-		println!("meetup count: unknown");
-	};
+	let encoded_meetup_count = perform_trusted_operation(cli, trusted_args, &top);
+	let meetup_count = decode_to_option(encoded_meetup_count).unwrap_or_default();
 
 	let top: TrustedOperation = PublicGetter::ceremonies_meetup_time_offset().into();
-	let mut meetup_time_offset = MeetupTimeOffsetType::default();
-	if let Some(offset) = perform_trusted_operation(cli, trusted_args, &top) {
-		match MeetupTimeOffsetType::decode(&mut offset.as_slice()) {
-			Ok(o) => {
-				meetup_time_offset = o;
-			},
-			Err(_) => {
-				error!("Could not decode the meetup time offset");
-			},
-		}
-	} else {
-		debug!("meetup time offset: unknown");
-	};
+	let encoded_meetup_time_offset = perform_trusted_operation(cli, trusted_args, &top);
+	let meetup_time_offset = decode_to_option(encoded_meetup_time_offset).unwrap_or_default();
 
 	let top: TrustedOperation =
 		PublicGetter::ceremonies_assignment_counts(community_identifier, ceremony_index).into();
-	let mut assigned = AssignmentCount::default();
-	if let Some(count) = perform_trusted_operation(cli, trusted_args, &top) {
-		match AssignmentCount::decode(&mut count.as_slice()) {
-			Ok(ac) => {
-				assigned = ac;
-				debug!("found assignment_count: {}", assigned.get_number_of_participants());
-			},
-			Err(_) => {
-				error!("Could not decode the assignment count");
-			},
-		}
-	} else {
-		debug!("assignment count: unknown");
-	};
+	let encoded_assigned = perform_trusted_operation(cli, trusted_args, &top);
+	let assigned = decode_to_option(encoded_assigned).unwrap_or_default();
 
 	let mut meetups = vec![];
 	for meetup_index in 1..=meetup_count {
@@ -354,10 +317,7 @@ fn get_bootstrapper(
 	.sign(&KeyPair::Sr25519(who.clone()))
 	.into();
 	let bootstrapper = perform_trusted_operation(cli, trusted_args, &top);
-	match decode_participant(bootstrapper) {
-		Some(p) => Some((p, ParticipantType::Bootstrapper)),
-		None => None,
-	}
+	decode_participant_and_type(bootstrapper, ParticipantType::Bootstrapper)
 }
 
 fn get_reputable(
@@ -378,10 +338,7 @@ fn get_reputable(
 	.sign(&KeyPair::Sr25519(who.clone()))
 	.into();
 	let reputable = perform_trusted_operation(cli, trusted_args, &top);
-	match decode_participant(reputable) {
-		Some(p) => Some((p, ParticipantType::Reputable)),
-		None => None,
-	}
+	decode_participant_and_type(reputable, ParticipantType::Reputable)
 }
 
 fn get_endorsee(
@@ -402,10 +359,7 @@ fn get_endorsee(
 	.sign(&KeyPair::Sr25519(who.clone()))
 	.into();
 	let endorsee = perform_trusted_operation(cli, trusted_args, &top);
-	match decode_participant(endorsee) {
-		Some(p) => Some((p, ParticipantType::Endorsee)),
-		None => None,
-	}
+	decode_participant_and_type(endorsee, ParticipantType::Endorsee)
 }
 
 fn get_newbie(
@@ -426,10 +380,7 @@ fn get_newbie(
 	.sign(&KeyPair::Sr25519(who.clone()))
 	.into();
 	let newbie = perform_trusted_operation(cli, trusted_args, &top);
-	match decode_participant(newbie) {
-		Some(p) => Some((p, ParticipantType::Newbie)),
-		None => None,
-	}
+	decode_participant_and_type(newbie, ParticipantType::Newbie)
 }
 
 pub fn prove_attendance(
@@ -477,10 +428,13 @@ pub fn decode_aggregated_account_data(
 
  */
 
-pub fn decode_participant(encoded_participant: Option<Vec<u8>>) -> Option<AccountId> {
+pub fn decode_participant_and_type(
+	encoded_participant: Option<Vec<u8>>,
+	participant_type: ParticipantType,
+) -> Option<(AccountId, ParticipantType)> {
 	encoded_participant.and_then(|p| {
 		if let Ok(account_decoded) = Decode::decode(&mut p.as_slice()) {
-			Some(account_decoded)
+			Some((account_decoded, participant_type))
 		} else {
 			error!("Could not decode the participants");
 			None
@@ -499,12 +453,12 @@ pub fn decode_participants(encoded_participants: Option<Vec<u8>>) -> Option<Vec<
 	})
 }
 
-pub fn decode_assignments(encoded_assignments: Option<Vec<u8>>) -> Option<Assignment> {
-	encoded_assignments.and_then(|assignments| {
-		if let Ok(assignment_decoded) = Decode::decode(&mut assignments.as_slice()) {
-			Some(assignment_decoded)
+pub fn decode_to_option<T: Decode>(encoded_value: Option<Vec<u8>>) -> Option<T> {
+	encoded_value.and_then(|value| {
+		if let Ok(decoded_value) = Decode::decode(&mut value.as_slice()) {
+			Some(decoded_value)
 		} else {
-			error!("Could not decode the assignments");
+			error!("Could not decode the value");
 			None
 		}
 	})

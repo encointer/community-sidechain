@@ -418,7 +418,7 @@ impl ExecuteCall for TrustedCallSigned {
 			TrustedCall::ceremonies_migrate_to_private_community(who, cid, locations) => {
 				let origin = ita_sgx_runtime::Origin::signed(who.clone());
 
-				//Block getter of confidential data if it is not the CeremonyMaster
+				// Block getter of confidential data if it is not the CeremonyMaster.
 				if !is_ceremony_master(who) {
 					return Err(Self::Error::Dispatch(
 						"community migration can only be done by the ceremony master".to_string(),
@@ -459,7 +459,7 @@ impl ExecuteCall for TrustedCallSigned {
 			TrustedCall::communities_add_location(who, cid, location) => {
 				let origin = ita_sgx_runtime::Origin::signed(who.clone());
 
-				//Block getter of confidential data if it is not the CeremonyMaster
+				// Block getter of confidential data if it is not the CeremonyMaster.
 				if !is_ceremony_master(who) {
 					return Err(Self::Error::Dispatch(
 						"adding a location to a private community can only be done by the ceremony master".to_string(),

@@ -24,7 +24,7 @@ use itp_node_api::api_client::encointer::EncointerApi;
 use log::*;
 use std::str::FromStr;
 
-/// List all assigned meetups for current encointer ceremony and supplied community identifier  
+/// List all assigned meetups for current encointer ceremony and supplied community identifier.  
 #[derive(Debug, Clone, Parser)]
 pub struct ListMeetupsCommand {
 	/// Only Ceremony Master can execute this (SUDO).
