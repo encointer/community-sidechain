@@ -114,7 +114,7 @@ where
 		"id": "1",
 		});
 
-		let locations = self.get_request(req.into())?.ok_or_else(|| {
+		let locations = self.get_request(req)?.ok_or_else(|| {
 			ApiClientError::Other(
 				format!("No locations founds. Does the cid {} exist", community_id).into(),
 			)
