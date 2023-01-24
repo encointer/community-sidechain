@@ -70,7 +70,7 @@ impl MakeCommunityPrivateCommand {
 			cid,
 			locations,
 		)
-		.sign(&KeyPair::Sr25519(who.clone()), nonce, &mrenclave, &shard)
+		.sign(&KeyPair::Sr25519(who), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 		let _ = perform_trusted_operation(cli, trusted_args, &top).unwrap();
 		info!("trusted call ceremonies_migrate_to_private_community executed");
