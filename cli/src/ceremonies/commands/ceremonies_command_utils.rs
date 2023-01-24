@@ -97,7 +97,7 @@ pub fn get_ceremony_stats(
 		community_identifier,
 		ceremony_index,
 	)
-	.sign(&KeyPair::Sr25519(who.clone()))
+	.sign(&KeyPair::Sr25519(who))
 	.into();
 	let encoded_assignments = perform_trusted_operation(cli, trusted_args, &top);
 	let assignment = decode_to_option(encoded_assignments).unwrap_or_default();
@@ -200,6 +200,7 @@ fn get_meetup_index(
 }
  */
 
+#[allow(clippy::too_many_arguments)]
 fn get_meetup_participants(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
@@ -314,7 +315,7 @@ fn get_bootstrapper(
 		ceremony_index,
 		participant_index_type,
 	)
-	.sign(&KeyPair::Sr25519(who.clone()))
+	.sign(&KeyPair::Sr25519(who))
 	.into();
 	let bootstrapper = perform_trusted_operation(cli, trusted_args, &top);
 	decode_participant_and_type(bootstrapper, ParticipantType::Bootstrapper)
@@ -335,7 +336,7 @@ fn get_reputable(
 		ceremony_index,
 		participant_index_type,
 	)
-	.sign(&KeyPair::Sr25519(who.clone()))
+	.sign(&KeyPair::Sr25519(who))
 	.into();
 	let reputable = perform_trusted_operation(cli, trusted_args, &top);
 	decode_participant_and_type(reputable, ParticipantType::Reputable)
@@ -356,7 +357,7 @@ fn get_endorsee(
 		ceremony_index,
 		participant_index_type,
 	)
-	.sign(&KeyPair::Sr25519(who.clone()))
+	.sign(&KeyPair::Sr25519(who))
 	.into();
 	let endorsee = perform_trusted_operation(cli, trusted_args, &top);
 	decode_participant_and_type(endorsee, ParticipantType::Endorsee)
@@ -377,7 +378,7 @@ fn get_newbie(
 		ceremony_index,
 		participant_index_type,
 	)
-	.sign(&KeyPair::Sr25519(who.clone()))
+	.sign(&KeyPair::Sr25519(who))
 	.into();
 	let newbie = perform_trusted_operation(cli, trusted_args, &top);
 	decode_participant_and_type(newbie, ParticipantType::Newbie)
