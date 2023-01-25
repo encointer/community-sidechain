@@ -21,7 +21,7 @@ services:
       - integritee-test-network
     entrypoint: "dockerize -wait tcp://encointer-node:9912 -timeout 30s
       /usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-1 -T wss://integritee-worker-1 
-      -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 -w 2101 -p 9912 -h 4645
+      -u ws://encointer-node -U ws://integritee-worker-1 -P 2011 -w 2101 -p 9912 -h 4645
       run --dev --skip-ra"
     restart: "no"
   integritee-worker-2:
