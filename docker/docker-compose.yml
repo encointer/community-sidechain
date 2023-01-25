@@ -1,6 +1,6 @@
 services:
   encointer-node:
-    image: "encointer/encointer-node-notee:0.0.2"
+    image: "encointer/encointer-node-notee:1.3.3-for-tee"
     container_name: encointer-node
     networks:
       - integritee-test-network
