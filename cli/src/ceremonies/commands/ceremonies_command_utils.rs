@@ -15,14 +15,428 @@
 
 */
 
-use codec::{Decode, Encode};
-use encointer_primitives::{
-	ceremonies::ProofOfAttendance, communities::CommunityIdentifier, scheduler::CeremonyIndexType,
+use crate::{
+	command_utils::get_chain_api, trusted_command_utils::get_pair_from_str,
+	trusted_commands::TrustedArgs, trusted_operation::perform_trusted_operation, Cli,
 };
-use ita_stf::{AccountId, Signature};
+use codec::{Decode, Encode, Error as CodecError};
+use encointer_ceremonies_assignment::assignment_fn_inverse;
+use encointer_primitives::{
+	ceremonies::{
+		Assignment, AssignmentCount, CommunityCeremony, MeetupIndexType, ParticipantIndexType,
+		ParticipantType, ProofOfAttendance,
+	},
+	communities::{CommunityIdentifier, Location},
+	scheduler::CeremonyIndexType,
+};
+use ita_stf::{
+	AccountId, KeyPair, Moment, PublicGetter, Signature, TrustedGetter, TrustedOperation,
+};
+use itp_node_api::api_client::encointer::EncointerApi;
 use log::*;
+use serde::{Deserialize, Serialize};
 use sp_application_crypto::Ss58Codec;
 use sp_core::{sr25519 as sr25519_core, Pair};
+
+pub const ONE_DAY: Moment = 86_400_000;
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+	#[error("{0}")]
+	Codec(#[from] CodecError),
+	#[error("Error, other: {0}")]
+	Other(Box<dyn std::error::Error + Sync + Send + 'static>),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Meetup {
+	pub index: MeetupIndexType,
+	pub location: Location,
+	pub time: Moment,
+	pub registrations: Vec<(AccountId, ParticipantType)>,
+}
+
+impl Meetup {
+	pub fn new(
+		index: MeetupIndexType,
+		location: Location,
+		time: Moment,
+		registrations: Vec<(AccountId, ParticipantType)>,
+	) -> Self {
+		Self { index, location, time, registrations }
+	}
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommunityCeremonyStats {
+	pub community_ceremony: CommunityCeremony,
+	pub assignment: Assignment,
+	pub assignment_count: AssignmentCount,
+	pub meetup_count: MeetupIndexType,
+	pub meetups: Vec<Meetup>,
+}
+
+impl CommunityCeremonyStats {
+	pub fn new(
+		community_ceremony: CommunityCeremony,
+		assignment: Assignment,
+		assignment_count: AssignmentCount,
+		meetup_count: MeetupIndexType,
+		meetups: Vec<Meetup>,
+	) -> Self {
+		Self { community_ceremony, assignment, assignment_count, meetup_count, meetups }
+	}
+}
+
+pub fn get_ceremony_stats(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	arg_who: &str,
+	community_identifier: CommunityIdentifier,
+	ceremony_index: CeremonyIndexType,
+) -> Result<CommunityCeremonyStats, Error> {
+	let api = get_chain_api(cli);
+	let who = get_pair_from_str(trusted_args, arg_who);
+
+	let top: TrustedOperation = TrustedGetter::ceremonies_assignments(
+		who.public().into(),
+		community_identifier,
+		ceremony_index,
+	)
+	.sign(&KeyPair::Sr25519(who))
+	.into();
+	let encoded_assignments = perform_trusted_operation(cli, trusted_args, &top)
+		.ok_or_else(|| Error::Other("Assignments don't exist".into()))?;
+	let assignment = Decode::decode(&mut encoded_assignments.as_slice())?;
+
+	let top: TrustedOperation =
+		PublicGetter::ceremonies_meetup_count(community_identifier, ceremony_index).into();
+	let encoded_meetup_count = perform_trusted_operation(cli, trusted_args, &top)
+		.ok_or_else(|| Error::Other("MeetupCount not found".into()))?;
+	let meetup_count = Decode::decode(&mut encoded_meetup_count.as_slice())?;
+
+	let top: TrustedOperation = PublicGetter::ceremonies_meetup_time_offset().into();
+	let encoded_meetup_time_offset =
+		perform_trusted_operation(cli, trusted_args, &top).unwrap_or_default();
+	let meetup_time_offset =
+		Decode::decode(&mut encoded_meetup_time_offset.as_slice()).unwrap_or_default();
+
+	let top: TrustedOperation =
+		PublicGetter::ceremonies_assignment_counts(community_identifier, ceremony_index).into();
+	let encoded_assigned = perform_trusted_operation(cli, trusted_args, &top)
+		.ok_or_else(|| Error::Other("AssignmentCounts not found".into()))?;
+	let assigned = Decode::decode(&mut encoded_assigned.as_slice())?;
+
+	let mut meetups = vec![];
+	for meetup_index in 1..=meetup_count {
+		let meetup_location = api
+			.get_meetup_locations(community_identifier, assignment, meetup_index)
+			.expect("No meetup location found.")
+			.unwrap();
+		let time = api.get_meetup_time(meetup_location, ONE_DAY, meetup_time_offset).unwrap_or(0);
+
+		//meetup participants
+		let participants = get_meetup_participants_with_type(
+			cli,
+			trusted_args,
+			arg_who,
+			community_identifier,
+			ceremony_index,
+			meetup_index,
+			meetup_count,
+			assignment,
+			assigned,
+		)?;
+		meetups.push(Meetup::new(meetup_index, meetup_location, time, participants))
+	}
+
+	Ok(CommunityCeremonyStats::new(
+		(community_identifier, ceremony_index),
+		assignment,
+		assigned,
+		meetup_count,
+		meetups,
+	))
+}
+
+/*
+fn get_aggregated_account_data(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	arg_who: &str,
+	community_identifier: CommunityIdentifier,
+	ceremony_index: CeremonyIndexType,
+	account_id: AccountId,
+) -> Option<AggregatedAccountData<AccountId, Moment>> {
+	//signer: Master or Me (account_id)
+	let who = get_pair_from_str(trusted_args, arg_who);
+
+	//TODO account sign and param?
+	let top: TrustedOperation = TrustedGetter::ceremonies_aggregated_account_data(
+		account_id,
+		community_identifier,
+		ceremony_index,
+	)
+	.sign(&KeyPair::Sr25519(who.clone()))
+	.into();
+
+	let encoded_data = perform_trusted_operation(cli, trusted_args, &top);
+	decode_aggregated_account_data(encoded_data)
+}
+
+fn get_meetup_index(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	arg_who: &str,
+	community_identifier: CommunityIdentifier,
+	ceremony_index: CeremonyIndexType,
+	account_id: AccountId,
+) -> Option<MeetupIndexType> {
+	if let Some(account_data) = get_aggregated_account_data(
+		cli,
+		trusted_args,
+		arg_who,
+		community_identifier,
+		ceremony_index,
+		account_id,
+	) {
+		match account_data.personal {
+			Some(personal) => return personal.meetup_index,
+			None => return None,
+		}
+	} else {
+		println!("aggregated account data: unknown");
+	}
+	None
+}
+ */
+
+#[allow(clippy::too_many_arguments)]
+fn get_meetup_participants_with_type(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	arg_who: &str,
+	community_identifier: CommunityIdentifier,
+	ceremony_index: CeremonyIndexType,
+	meetup_index: MeetupIndexType,
+	meetup_count: MeetupIndexType,
+	assignment: Assignment,
+	assigned: AssignmentCount,
+) -> Result<Vec<(AccountId, ParticipantType)>, Error> {
+	let meetup_index_zero_based = meetup_index - 1;
+	if meetup_index_zero_based > meetup_count {
+		return Err(Error::Other(
+			format!(
+				"Invalid meetup index > meetup count: {}, {}",
+				meetup_index_zero_based, meetup_count
+			)
+			.into(),
+		))
+	};
+	let bootstrappers_reputables = assignment_fn_inverse(
+		meetup_index_zero_based,
+		assignment.bootstrappers_reputables,
+		meetup_count,
+		assigned.bootstrappers + assigned.reputables,
+	)
+	.unwrap_or_default()
+	.into_iter()
+	.filter_map(|p_index| {
+		get_bootstrapper_or_reputable_with_type(
+			cli,
+			trusted_args,
+			arg_who,
+			community_identifier,
+			ceremony_index,
+			p_index,
+			&assigned,
+		)
+		.ok()
+	});
+
+	let endorsees = assignment_fn_inverse(
+		meetup_index_zero_based,
+		assignment.endorsees,
+		meetup_count,
+		assigned.endorsees,
+	)
+	.unwrap_or_default()
+	.into_iter()
+	.filter(|p| p < &assigned.endorsees)
+	.filter_map(|p| {
+		get_endorsee_with_type(
+			cli,
+			trusted_args,
+			arg_who,
+			community_identifier,
+			ceremony_index,
+			p + 1,
+		)
+		.ok()
+	});
+
+	let newbies = assignment_fn_inverse(
+		meetup_index_zero_based,
+		assignment.newbies,
+		meetup_count,
+		assigned.newbies,
+	)
+	.unwrap_or_default()
+	.into_iter()
+	.filter(|p| p < &assigned.newbies)
+	.filter_map(|p| {
+		get_newbie_with_type(
+			cli,
+			trusted_args,
+			arg_who,
+			community_identifier,
+			ceremony_index,
+			p + 1,
+		)
+		.ok()
+	});
+
+	Ok(bootstrappers_reputables.chain(endorsees).chain(newbies).collect())
+}
+
+fn get_bootstrapper_or_reputable_with_type(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	arg_who: &str,
+	community_identifier: CommunityIdentifier,
+	ceremony_index: CeremonyIndexType,
+	participant_index: ParticipantIndexType,
+	assigned: &AssignmentCount,
+) -> Result<(AccountId, ParticipantType), Error> {
+	if participant_index < assigned.bootstrappers {
+		return Ok((
+			get_bootstrapper(
+				cli,
+				trusted_args,
+				arg_who,
+				community_identifier,
+				ceremony_index,
+				participant_index + 1,
+			)?,
+			ParticipantType::Bootstrapper,
+		))
+	} else if participant_index < assigned.bootstrappers + assigned.reputables {
+		return Ok((
+			get_reputable(
+				cli,
+				trusted_args,
+				arg_who,
+				community_identifier,
+				ceremony_index,
+				participant_index - assigned.bootstrappers + 1,
+			)?,
+			ParticipantType::Reputable,
+		))
+	}
+	Err(Error::Other(
+		format!("Bootstrapper or Reputable at index {} not found", participant_index).into(),
+	))
+}
+
+fn get_bootstrapper(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	arg_who: &str,
+	community_identifier: CommunityIdentifier,
+	ceremony_index: CeremonyIndexType,
+	participant_index: ParticipantIndexType,
+) -> Result<AccountId, Error> {
+	let who = get_pair_from_str(trusted_args, arg_who);
+	let top: TrustedOperation = TrustedGetter::ceremonies_registered_bootstrapper(
+		who.public().into(),
+		community_identifier,
+		ceremony_index,
+		participant_index,
+	)
+	.sign(&KeyPair::Sr25519(who))
+	.into();
+	let encoded_bootstrapper =
+		perform_trusted_operation(cli, trusted_args, &top).ok_or_else(|| {
+			Error::Other(format!("Bootstrapper at index {} not found", participant_index).into())
+		})?;
+
+	Ok(Decode::decode(&mut encoded_bootstrapper.as_slice())?)
+}
+
+fn get_reputable(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	arg_who: &str,
+	community_identifier: CommunityIdentifier,
+	ceremony_index: CeremonyIndexType,
+	participant_index: ParticipantIndexType,
+) -> Result<AccountId, Error> {
+	let who = get_pair_from_str(trusted_args, arg_who);
+	let top: TrustedOperation = TrustedGetter::ceremonies_registered_reputable(
+		who.public().into(),
+		community_identifier,
+		ceremony_index,
+		participant_index,
+	)
+	.sign(&KeyPair::Sr25519(who))
+	.into();
+	let encoded_reputable =
+		perform_trusted_operation(cli, trusted_args, &top).ok_or_else(|| {
+			Error::Other(format!("Reputable at index {} not found", participant_index).into())
+		})?;
+
+	Ok(Decode::decode(&mut encoded_reputable.as_slice())?)
+}
+
+fn get_endorsee_with_type(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	arg_who: &str,
+	community_identifier: CommunityIdentifier,
+	ceremony_index: CeremonyIndexType,
+	participant_index: ParticipantIndexType,
+) -> Result<(AccountId, ParticipantType), Error> {
+	let who = get_pair_from_str(trusted_args, arg_who);
+	let top: TrustedOperation = TrustedGetter::ceremonies_registered_endorsee(
+		who.public().into(),
+		community_identifier,
+		ceremony_index,
+		participant_index,
+	)
+	.sign(&KeyPair::Sr25519(who))
+	.into();
+	let encoded_endorsee = perform_trusted_operation(cli, trusted_args, &top).ok_or_else(|| {
+		Error::Other(format!("Endorsee at index {} not found", participant_index).into())
+	})?;
+
+	Ok((Decode::decode(&mut encoded_endorsee.as_slice())?, ParticipantType::Endorsee))
+}
+
+fn get_newbie_with_type(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	arg_who: &str,
+	community_identifier: CommunityIdentifier,
+	ceremony_index: CeremonyIndexType,
+	participant_index: ParticipantIndexType,
+) -> Result<(AccountId, ParticipantType), Error> {
+	let who = get_pair_from_str(trusted_args, arg_who);
+	let top: TrustedOperation = TrustedGetter::ceremonies_registered_newbie(
+		who.public().into(),
+		community_identifier,
+		ceremony_index,
+		participant_index,
+	)
+	.sign(&KeyPair::Sr25519(who))
+	.into();
+	let encoded_newbie = perform_trusted_operation(cli, trusted_args, &top).ok_or_else(|| {
+		Error::Other(format!("Newbie at index {} not found", participant_index).into())
+	})?;
+
+	Ok((Decode::decode(&mut encoded_newbie.as_slice())?, ParticipantType::Newbie))
+}
 
 pub fn prove_attendance(
 	prover: &AccountId,
@@ -53,6 +467,21 @@ pub fn list_participants(encoded_participants: Option<Vec<u8>>) {
 		},
 	};
 }
+/*
+pub fn decode_aggregated_account_data(
+	encoded_data: Option<Vec<u8>>,
+) -> Option<AggregatedAccountData<AccountId, Moment>> {
+	encoded_data.and_then(|data| {
+		if let Ok(data_decoded) = Decode::decode(&mut data.as_slice()) {
+			Some(data_decoded)
+		} else {
+			error!("Could not decode the aggregated account data");
+			None
+		}
+	})
+}
+
+ */
 
 pub fn decode_participants(encoded_participants: Option<Vec<u8>>) -> Option<Vec<AccountId>> {
 	encoded_participants.and_then(|participants| {

@@ -27,7 +27,7 @@ use log::*;
 use sp_core::Pair;
 use std::str::FromStr;
 
-/// List registered participants for next encointer ceremony.
+/// List registered participants for next encointer ceremony and supplied community identifier.  
 #[derive(Debug, Clone, Parser)]
 pub struct ListParticipantsCommand {
 	/// Only Ceremony Master can execute this (SUDO).
@@ -82,7 +82,10 @@ impl ListParticipantsCommand {
 		.into();
 		let newbies = perform_trusted_operation(cli, trusted_args, &top);
 
-		println!("Ceremony ({}) participants of community {} :", ceremony_index, self.community_id);
+		println!(
+			"Participants of community {} for ceremony {} :",
+			self.community_id, ceremony_index
+		);
 		println!("- Bootstrappers :");
 		list_participants(bootstrappers);
 		println!();

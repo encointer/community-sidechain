@@ -15,8 +15,22 @@
 
 */
 
-pub mod ceremonies_command_utils;
-pub mod list_meetups;
-pub mod list_participants;
-pub mod register_participant;
-pub mod upgrade_registration;
+use crate::{
+	trusted_commands::TrustedArgs,
+	trusted_encointer_base_cli::commands::make_community_private::MakeCommunityPrivateCommand, Cli,
+};
+
+mod commands;
+
+#[derive(Debug, clap::Subcommand)]
+pub enum TrustedEncointerBaseCli {
+	MakeCommunityPrivate(MakeCommunityPrivateCommand),
+}
+
+impl TrustedEncointerBaseCli {
+	pub fn run(&self, cli: &Cli, trusted_args: &TrustedArgs) {
+		match self {
+			TrustedEncointerBaseCli::MakeCommunityPrivate(cmd) => cmd.run(cli, trusted_args),
+		}
+	}
+}

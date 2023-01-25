@@ -7,9 +7,11 @@ edition = "2021"
 [dependencies]
 # crates.io
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+serde_json = { version = "1.0.79" }
 thiserror = { version = "1.0" }
 
 # encointer
+encointer-ceremonies-assignment = { git = "https://github.com/encointer/pallets.git", branch = "master" }
 encointer-primitives = { git = "https://github.com/encointer/pallets.git", branch = "master", features = ["serde_derive"] }
 
 # substrate

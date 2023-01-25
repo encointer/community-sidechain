@@ -17,7 +17,7 @@
 
 use crate::{
 	ceremonies::commands::{
-		list_participants::ListParticipantsCommand,
+		list_meetups::ListMeetupsCommand, list_participants::ListParticipantsCommand,
 		register_participant::RegisterParticipantCommand,
 		upgrade_registration::UpgradeRegistrationCommand,
 	},
@@ -32,6 +32,7 @@ pub enum CeremoniesCommands {
 	RegisterParticipant(RegisterParticipantCommand),
 	UpgradeRegistration(UpgradeRegistrationCommand),
 	ListParticipants(ListParticipantsCommand),
+	ListMeetups(ListMeetupsCommand),
 	/*
 		CeremoniesUnregisterParticipant(),
 		CeremoniesAttestAttendees(),
@@ -55,6 +56,7 @@ impl CeremoniesCommands {
 			CeremoniesCommands::RegisterParticipant(cmd) => cmd.run(cli, trusted_args),
 			CeremoniesCommands::UpgradeRegistration(cmd) => cmd.run(cli, trusted_args),
 			CeremoniesCommands::ListParticipants(cmd) => cmd.run(cli, trusted_args),
+			CeremoniesCommands::ListMeetups(cmd) => cmd.run(cli, trusted_args),
 		}
 	}
 }
