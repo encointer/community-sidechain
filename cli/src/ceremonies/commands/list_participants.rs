@@ -84,7 +84,7 @@ impl ListParticipantsCommand {
 
 		println!(
 			"Participants of community {} for ceremony {} :",
-			ceremony_index, self.community_id
+			self.community_id, ceremony_index
 		);
 		println!("- Bootstrappers :");
 		list_participants(bootstrappers);

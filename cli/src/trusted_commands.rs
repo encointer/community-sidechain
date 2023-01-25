@@ -69,10 +69,8 @@ impl TrustedArgs {
 		match &self.command {
 			TrustedCommands::BaseTrusted(cmd) => cmd.run(cli, self),
 			TrustedCommands::Benchmark(benchmark_commands) => benchmark_commands.run(cli, self),
-			TrustedCommands::CeremoniesCommands(ceremonies_commands) =>
-				ceremonies_commands.run(cli, self),
-			TrustedCommands::EncointerBaseTrusted(encointer_base_cmd) =>
-				encointer_base_cmd.run(cli, self),
+			TrustedCommands::CeremoniesCommands(cmd) => cmd.run(cli, self),
+			TrustedCommands::EncointerBaseTrusted(cmd) => cmd.run(cli, self),
 			#[cfg(feature = "evm")]
 			TrustedCommands::EvmCommands(evm_commands) => evm_commands.run(cli, self),
 		}

@@ -19,7 +19,7 @@ use crate::{
 	command_utils::get_chain_api, trusted_command_utils::get_pair_from_str,
 	trusted_commands::TrustedArgs, trusted_operation::perform_trusted_operation, Cli,
 };
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, Error as CodecError};
 use encointer_ceremonies_assignment::assignment_fn_inverse;
 use encointer_primitives::{
 	ceremonies::{
@@ -39,6 +39,14 @@ use sp_application_crypto::Ss58Codec;
 use sp_core::{sr25519 as sr25519_core, Pair};
 
 pub const ONE_DAY: Moment = 86_400_000;
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+	#[error("{0}")]
+	Codec(#[from] CodecError),
+	#[error("Error, other: {0}")]
+	Other(Box<dyn std::error::Error + Sync + Send + 'static>),
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -88,7 +96,7 @@ pub fn get_ceremony_stats(
 	arg_who: &str,
 	community_identifier: CommunityIdentifier,
 	ceremony_index: CeremonyIndexType,
-) -> Option<CommunityCeremonyStats> {
+) -> Result<CommunityCeremonyStats, Error> {
 	let api = get_chain_api(cli);
 	let who = get_pair_from_str(trusted_args, arg_who);
 
@@ -99,33 +107,38 @@ pub fn get_ceremony_stats(
 	)
 	.sign(&KeyPair::Sr25519(who))
 	.into();
-	let encoded_assignments = perform_trusted_operation(cli, trusted_args, &top);
-	let assignment = decode_to_option(encoded_assignments).unwrap_or_default();
+	let encoded_assignments = perform_trusted_operation(cli, trusted_args, &top)
+		.ok_or_else(|| Error::Other("Assignments don't exist".into()))?;
+	let assignment = Decode::decode(&mut encoded_assignments.as_slice())?;
 
 	let top: TrustedOperation =
 		PublicGetter::ceremonies_meetup_count(community_identifier, ceremony_index).into();
-	let encoded_meetup_count = perform_trusted_operation(cli, trusted_args, &top);
-	let meetup_count = decode_to_option(encoded_meetup_count).unwrap_or_default();
+	let encoded_meetup_count = perform_trusted_operation(cli, trusted_args, &top)
+		.ok_or_else(|| Error::Other("MeetupCount not found".into()))?;
+	let meetup_count = Decode::decode(&mut encoded_meetup_count.as_slice())?;
 
 	let top: TrustedOperation = PublicGetter::ceremonies_meetup_time_offset().into();
-	let encoded_meetup_time_offset = perform_trusted_operation(cli, trusted_args, &top);
-	let meetup_time_offset = decode_to_option(encoded_meetup_time_offset).unwrap_or_default();
+	let encoded_meetup_time_offset =
+		perform_trusted_operation(cli, trusted_args, &top).unwrap_or_default();
+	let meetup_time_offset =
+		Decode::decode(&mut encoded_meetup_time_offset.as_slice()).unwrap_or_default();
 
 	let top: TrustedOperation =
 		PublicGetter::ceremonies_assignment_counts(community_identifier, ceremony_index).into();
-	let encoded_assigned = perform_trusted_operation(cli, trusted_args, &top);
-	let assigned = decode_to_option(encoded_assigned).unwrap_or_default();
+	let encoded_assigned = perform_trusted_operation(cli, trusted_args, &top)
+		.ok_or_else(|| Error::Other("AssignmentCounts not found".into()))?;
+	let assigned = Decode::decode(&mut encoded_assigned.as_slice())?;
 
 	let mut meetups = vec![];
 	for meetup_index in 1..=meetup_count {
 		let meetup_location = api
 			.get_meetup_locations(community_identifier, assignment, meetup_index)
-			.unwrap_or_default()
-			.unwrap_or_default();
+			.expect("No meetup location found.")
+			.unwrap();
 		let time = api.get_meetup_time(meetup_location, ONE_DAY, meetup_time_offset).unwrap_or(0);
 
 		//meetup participants
-		let participants = get_meetup_participants(
+		let participants = get_meetup_participants_with_type(
 			cli,
 			trusted_args,
 			arg_who,
@@ -135,11 +148,11 @@ pub fn get_ceremony_stats(
 			meetup_count,
 			assignment,
 			assigned,
-		);
+		)?;
 		meetups.push(Meetup::new(meetup_index, meetup_location, time, participants))
 	}
 
-	Some(CommunityCeremonyStats::new(
+	Ok(CommunityCeremonyStats::new(
 		(community_identifier, ceremony_index),
 		assignment,
 		assigned,
@@ -201,7 +214,7 @@ fn get_meetup_index(
  */
 
 #[allow(clippy::too_many_arguments)]
-fn get_meetup_participants(
+fn get_meetup_participants_with_type(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
 	arg_who: &str,
@@ -211,14 +224,16 @@ fn get_meetup_participants(
 	meetup_count: MeetupIndexType,
 	assignment: Assignment,
 	assigned: AssignmentCount,
-) -> Vec<(AccountId, ParticipantType)> {
+) -> Result<Vec<(AccountId, ParticipantType)>, Error> {
 	let meetup_index_zero_based = meetup_index - 1;
 	if meetup_index_zero_based > meetup_count {
-		error!(
-			"Invalid meetup index > meetup count: {}, {}",
-			meetup_index_zero_based, meetup_count
-		);
-		return vec![]
+		return Err(Error::Other(
+			format!(
+				"Invalid meetup index > meetup count: {}, {}",
+				meetup_index_zero_based, meetup_count
+			)
+			.into(),
+		))
 	};
 	let bootstrappers_reputables = assignment_fn_inverse(
 		meetup_index_zero_based,
@@ -229,7 +244,7 @@ fn get_meetup_participants(
 	.unwrap_or_default()
 	.into_iter()
 	.filter_map(|p_index| {
-		get_bootstrapper_or_reputable(
+		get_bootstrapper_or_reputable_with_type(
 			cli,
 			trusted_args,
 			arg_who,
@@ -238,6 +253,7 @@ fn get_meetup_participants(
 			p_index,
 			&assigned,
 		)
+		.ok()
 	});
 
 	let endorsees = assignment_fn_inverse(
@@ -250,7 +266,15 @@ fn get_meetup_participants(
 	.into_iter()
 	.filter(|p| p < &assigned.endorsees)
 	.filter_map(|p| {
-		get_endorsee(cli, trusted_args, arg_who, community_identifier, ceremony_index, p + 1)
+		get_endorsee_with_type(
+			cli,
+			trusted_args,
+			arg_who,
+			community_identifier,
+			ceremony_index,
+			p + 1,
+		)
+		.ok()
 	});
 
 	let newbies = assignment_fn_inverse(
@@ -263,41 +287,57 @@ fn get_meetup_participants(
 	.into_iter()
 	.filter(|p| p < &assigned.newbies)
 	.filter_map(|p| {
-		get_newbie(cli, trusted_args, arg_who, community_identifier, ceremony_index, p + 1)
+		get_newbie_with_type(
+			cli,
+			trusted_args,
+			arg_who,
+			community_identifier,
+			ceremony_index,
+			p + 1,
+		)
+		.ok()
 	});
 
-	bootstrappers_reputables.chain(endorsees).chain(newbies).collect()
+	Ok(bootstrappers_reputables.chain(endorsees).chain(newbies).collect())
 }
 
-fn get_bootstrapper_or_reputable(
+fn get_bootstrapper_or_reputable_with_type(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
 	arg_who: &str,
 	community_identifier: CommunityIdentifier,
 	ceremony_index: CeremonyIndexType,
-	p_index: ParticipantIndexType,
+	participant_index: ParticipantIndexType,
 	assigned: &AssignmentCount,
-) -> Option<(AccountId, ParticipantType)> {
-	if p_index < assigned.bootstrappers {
-		return get_bootstrapper(
-			cli,
-			trusted_args,
-			arg_who,
-			community_identifier,
-			ceremony_index,
-			p_index + 1,
-		)
-	} else if p_index < assigned.bootstrappers + assigned.reputables {
-		return get_reputable(
-			cli,
-			trusted_args,
-			arg_who,
-			community_identifier,
-			ceremony_index,
-			p_index - assigned.bootstrappers + 1,
-		)
+) -> Result<(AccountId, ParticipantType), Error> {
+	if participant_index < assigned.bootstrappers {
+		return Ok((
+			get_bootstrapper(
+				cli,
+				trusted_args,
+				arg_who,
+				community_identifier,
+				ceremony_index,
+				participant_index + 1,
+			)?,
+			ParticipantType::Bootstrapper,
+		))
+	} else if participant_index < assigned.bootstrappers + assigned.reputables {
+		return Ok((
+			get_reputable(
+				cli,
+				trusted_args,
+				arg_who,
+				community_identifier,
+				ceremony_index,
+				participant_index - assigned.bootstrappers + 1,
+			)?,
+			ParticipantType::Reputable,
+		))
 	}
-	None
+	Err(Error::Other(
+		format!("Bootstrapper or Reputable at index {} not found", participant_index).into(),
+	))
 }
 
 fn get_bootstrapper(
@@ -306,19 +346,23 @@ fn get_bootstrapper(
 	arg_who: &str,
 	community_identifier: CommunityIdentifier,
 	ceremony_index: CeremonyIndexType,
-	participant_index_type: ParticipantIndexType,
-) -> Option<(AccountId, ParticipantType)> {
+	participant_index: ParticipantIndexType,
+) -> Result<AccountId, Error> {
 	let who = get_pair_from_str(trusted_args, arg_who);
 	let top: TrustedOperation = TrustedGetter::ceremonies_registered_bootstrapper(
 		who.public().into(),
 		community_identifier,
 		ceremony_index,
-		participant_index_type,
+		participant_index,
 	)
 	.sign(&KeyPair::Sr25519(who))
 	.into();
-	let bootstrapper = perform_trusted_operation(cli, trusted_args, &top);
-	decode_participant_and_type(bootstrapper, ParticipantType::Bootstrapper)
+	let encoded_bootstrapper =
+		perform_trusted_operation(cli, trusted_args, &top).ok_or_else(|| {
+			Error::Other(format!("Bootstrapper at index {} not found", participant_index).into())
+		})?;
+
+	Ok(Decode::decode(&mut encoded_bootstrapper.as_slice())?)
 }
 
 fn get_reputable(
@@ -327,61 +371,71 @@ fn get_reputable(
 	arg_who: &str,
 	community_identifier: CommunityIdentifier,
 	ceremony_index: CeremonyIndexType,
-	participant_index_type: ParticipantIndexType,
-) -> Option<(AccountId, ParticipantType)> {
+	participant_index: ParticipantIndexType,
+) -> Result<AccountId, Error> {
 	let who = get_pair_from_str(trusted_args, arg_who);
 	let top: TrustedOperation = TrustedGetter::ceremonies_registered_reputable(
 		who.public().into(),
 		community_identifier,
 		ceremony_index,
-		participant_index_type,
+		participant_index,
 	)
 	.sign(&KeyPair::Sr25519(who))
 	.into();
-	let reputable = perform_trusted_operation(cli, trusted_args, &top);
-	decode_participant_and_type(reputable, ParticipantType::Reputable)
+	let encoded_reputable =
+		perform_trusted_operation(cli, trusted_args, &top).ok_or_else(|| {
+			Error::Other(format!("Reputable at index {} not found", participant_index).into())
+		})?;
+
+	Ok(Decode::decode(&mut encoded_reputable.as_slice())?)
 }
 
-fn get_endorsee(
+fn get_endorsee_with_type(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
 	arg_who: &str,
 	community_identifier: CommunityIdentifier,
 	ceremony_index: CeremonyIndexType,
-	participant_index_type: ParticipantIndexType,
-) -> Option<(AccountId, ParticipantType)> {
+	participant_index: ParticipantIndexType,
+) -> Result<(AccountId, ParticipantType), Error> {
 	let who = get_pair_from_str(trusted_args, arg_who);
 	let top: TrustedOperation = TrustedGetter::ceremonies_registered_endorsee(
 		who.public().into(),
 		community_identifier,
 		ceremony_index,
-		participant_index_type,
+		participant_index,
 	)
 	.sign(&KeyPair::Sr25519(who))
 	.into();
-	let endorsee = perform_trusted_operation(cli, trusted_args, &top);
-	decode_participant_and_type(endorsee, ParticipantType::Endorsee)
+	let encoded_endorsee = perform_trusted_operation(cli, trusted_args, &top).ok_or_else(|| {
+		Error::Other(format!("Endorsee at index {} not found", participant_index).into())
+	})?;
+
+	Ok((Decode::decode(&mut encoded_endorsee.as_slice())?, ParticipantType::Endorsee))
 }
 
-fn get_newbie(
+fn get_newbie_with_type(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
 	arg_who: &str,
 	community_identifier: CommunityIdentifier,
 	ceremony_index: CeremonyIndexType,
-	participant_index_type: ParticipantIndexType,
-) -> Option<(AccountId, ParticipantType)> {
+	participant_index: ParticipantIndexType,
+) -> Result<(AccountId, ParticipantType), Error> {
 	let who = get_pair_from_str(trusted_args, arg_who);
 	let top: TrustedOperation = TrustedGetter::ceremonies_registered_newbie(
 		who.public().into(),
 		community_identifier,
 		ceremony_index,
-		participant_index_type,
+		participant_index,
 	)
 	.sign(&KeyPair::Sr25519(who))
 	.into();
-	let newbie = perform_trusted_operation(cli, trusted_args, &top);
-	decode_participant_and_type(newbie, ParticipantType::Newbie)
+	let encoded_newbie = perform_trusted_operation(cli, trusted_args, &top).ok_or_else(|| {
+		Error::Other(format!("Newbie at index {} not found", participant_index).into())
+	})?;
+
+	Ok((Decode::decode(&mut encoded_newbie.as_slice())?, ParticipantType::Newbie))
 }
 
 pub fn prove_attendance(
@@ -429,37 +483,12 @@ pub fn decode_aggregated_account_data(
 
  */
 
-pub fn decode_participant_and_type(
-	encoded_participant: Option<Vec<u8>>,
-	participant_type: ParticipantType,
-) -> Option<(AccountId, ParticipantType)> {
-	encoded_participant.and_then(|p| {
-		if let Ok(account_decoded) = Decode::decode(&mut p.as_slice()) {
-			Some((account_decoded, participant_type))
-		} else {
-			error!("Could not decode the participants");
-			None
-		}
-	})
-}
-
 pub fn decode_participants(encoded_participants: Option<Vec<u8>>) -> Option<Vec<AccountId>> {
 	encoded_participants.and_then(|participants| {
 		if let Ok(account_decoded) = Decode::decode(&mut participants.as_slice()) {
 			Some(account_decoded)
 		} else {
 			error!("Could not decode the participants");
-			None
-		}
-	})
-}
-
-pub fn decode_to_option<T: Decode>(encoded_value: Option<Vec<u8>>) -> Option<T> {
-	encoded_value.and_then(|value| {
-		if let Ok(decoded_value) = Decode::decode(&mut value.as_slice()) {
-			Some(decoded_value)
-		} else {
-			error!("Could not decode the value");
 			None
 		}
 	})
