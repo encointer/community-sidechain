@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        binary: ["integritee-client", "integritee-demo-validateer"]
+        binary: ["encointer-client", "encointer-demo-validateer"]
     steps:
       - uses: actions/checkout@v2
 

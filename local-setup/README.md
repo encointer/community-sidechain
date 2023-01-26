@@ -2,7 +2,7 @@
 
 ## Prerequisite
 - worker built with ` SGX_MODE=SW make`
-- integritee-node built with `cargo build --release --features skip-ias-check`
+- encointer-node built with `cargo build --release --features skip-ias-check`
 
 In case you have
 - a sgx hardware and compile the worker with `SGX_MODE=HW` (default mode)

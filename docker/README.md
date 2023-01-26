@@ -4,7 +4,7 @@
 
 * Make sure you have installed Docker (version > `1.25.0`) with [Docker Compose](https://docs.docker.com/compose/install/). On Windows, this can be Docker Desktop with WSL 2 integration.
 * In case you also build the worker directly, without docker (e.g. on a dev machine, running `make`), you should run `make clean` before running the docker build. Otherwise, it can occasionally lead to build errors.
-* The node image version that is loaded in the `docker-compose.yml`, (e.g. `image: "integritee/integritee-node-dev:1.0.11"`) needs to be compatible with the worker you're trying to build.
+* The node image version that is loaded in the `docker-compose.yml`, (e.g. `image: "encointer/encointer-node-notee:1.3.3-for-tee"`) needs to be compatible with the worker you're trying to build.
 
 ## Building the Docker containers
 
@@ -12,14 +12,14 @@ Run
 ```
 COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose build
 ```
-in this folder to build the worker image. This will build the worker from source and tag it in an image called `integritee-worker:dev`.
+in this folder to build the worker image. This will build the worker from source and tag it in an image called `encointer-worker:dev`.
 
 ## Running the docker setup
 
 ```
 docker compose up
 ``` 
-Starts all services (node and workers), using the `integritee-worker:dev` images you've built in the previous step.
+Starts all services (node and workers), using the `encointer-worker:dev` images you've built in the previous step.
 
 ## Run the demos
 
