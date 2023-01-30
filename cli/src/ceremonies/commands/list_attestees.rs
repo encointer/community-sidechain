@@ -156,7 +156,7 @@ impl ListAttesteesCommand {
 
 		let mut attestation_states = Vec::with_capacity(attestee_count as usize);
 
-		for attestation_index in 1..attestee_count + 1 {
+		for attestation_index in 1..=attestee_count {
 			let attestor = participants_attestation_indexes[&attestation_index].clone();
 			info!("Create Attestation state for {:?}", attestor);
 			let meetup_index = get_meetup_index(

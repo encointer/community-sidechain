@@ -386,14 +386,6 @@ impl ExecuteCall for TrustedCallSigned {
 			) => {
 				let origin = ita_sgx_runtime::Origin::signed(who);
 
-				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
-					!= CeremonyPhaseType::Attesting
-				{
-					return Err(Self::Error::Dispatch(
-						"attendees attestation can only be done during attesting phase".to_string(),
-					))
-				}
-
 				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::attest_attendees {
 					cid,
 					number_of_participants_vote,
@@ -414,15 +406,6 @@ impl ExecuteCall for TrustedCallSigned {
 				if !is_private_community(&cid) {
 					return Err(Self::Error::Dispatch(
 						"cannot register the participant: community is not private! ".to_string(),
-					))
-				}
-
-				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
-					== CeremonyPhaseType::Assigning
-				{
-					return Err(Self::Error::Dispatch(
-						"registering a participant can only be done during registering or attesting phase"
-							.to_string(),
 					))
 				}
 
@@ -496,14 +479,6 @@ impl ExecuteCall for TrustedCallSigned {
 					))
 				}
 
-				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
-					!= CeremonyPhaseType::Registering
-				{
-					return Err(Self::Error::Dispatch(
-						"adding a location can only be done during the registering phase"
-							.to_string(),
-					))
-				}
 				ita_sgx_runtime::EncointerCommunitiesCall::<Runtime>::add_location {
 					cid,
 					location,
