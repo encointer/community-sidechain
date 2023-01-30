@@ -18,7 +18,8 @@
 use crate::{AccountId, KeyPair, Signature};
 use codec::{Decode, Encode};
 use encointer_primitives::{
-	ceremonies::ParticipantIndexType, communities::CommunityIdentifier,
+	ceremonies::{AttestationIndexType, ParticipantIndexType},
+	communities::CommunityIdentifier,
 	scheduler::CeremonyIndexType,
 };
 use ita_sgx_runtime::System;
@@ -66,6 +67,7 @@ impl From<TrustedGetterSigned> for Getter {
 pub enum PublicGetter {
 	some_value,
 	ceremonies_assignment_counts(CommunityIdentifier, CeremonyIndexType),
+	ceremonies_attestation_count(CommunityIdentifier, CeremonyIndexType),
 	ceremonies_meetup_count(CommunityIdentifier, CeremonyIndexType),
 	ceremonies_meetup_time_offset(),
 	ceremonies_registered_bootstrappers_count(CommunityIdentifier, CeremonyIndexType),
@@ -91,12 +93,29 @@ pub enum TrustedGetter {
 	//encointer_balance(AccountId, CommunityIdentifier),
 	//ceremonies_participant_index(AccountId, CommunityIdentifier),
 	//Not public : ceremonies_meetup_index(AccountId, CommunityIdentifier),
-	ceremonies_aggregated_account_data(AccountId, CommunityIdentifier, CeremonyIndexType),
+	ceremonies_aggregated_account_data(AccountId, CommunityIdentifier, AccountId),
 	ceremonies_assignments(AccountId, CommunityIdentifier, CeremonyIndexType),
 	//ceremonies_meetup_locations(AccountId, CommunityIdentifier, CeremonyIndexType, MeetupIndexType),
 	//ceremonies_reputations(AccountId, CommunityIdentifier),
-	//ceremonies_attestations(AccountId, CommunityIdentifier),
 	//ceremonies_participant_reputation(AccountId, CommunityIdentifier, CeremonyIndexType),
+	ceremonies_meetup_participant_count_vote(
+		AccountId,
+		CommunityIdentifier,
+		CeremonyIndexType,
+		AccountId,
+	),
+	ceremonies_participant_attestees(
+		AccountId,
+		CommunityIdentifier,
+		CeremonyIndexType,
+		AttestationIndexType,
+	),
+	ceremonies_participant_attestation_index(
+		AccountId,
+		CommunityIdentifier,
+		CeremonyIndexType,
+		AccountId,
+	),
 	ceremonies_registered_bootstrapper(
 		AccountId,
 		CommunityIdentifier,
@@ -152,6 +171,12 @@ impl TrustedGetter {
 				sender_account,
 			TrustedGetter::ceremonies_assignments(sender_account, _, _) => sender_account,
 			//TrustedGetter::ceremonies_meetup_locations(sender_account, _, _, _) => sender_account,
+			TrustedGetter::ceremonies_meetup_participant_count_vote(sender_account, _, _, _) =>
+				sender_account,
+			TrustedGetter::ceremonies_participant_attestees(sender_account, _, _, _) =>
+				sender_account,
+			TrustedGetter::ceremonies_participant_attestation_index(sender_account, _, _, _) =>
+				sender_account,
 			TrustedGetter::ceremonies_registered_bootstrapper(sender_account, _, _, _) =>
 				sender_account,
 			TrustedGetter::ceremonies_registered_bootstrappers(sender_account, _, _) =>
@@ -269,26 +294,91 @@ impl ExecuteGetter for TrustedGetterSigned {
 				Some(attestations.encode())
 			},
 			 */
-			TrustedGetter::ceremonies_aggregated_account_data(
-				who,
-				community_id,
-				_ceremony_index,
-			) => {
-				error!("TrustedGetter ceremonies_aggregated_account_data");
+			TrustedGetter::ceremonies_aggregated_account_data(who, community_id, account_id) => {
+				debug!("TrustedGetter ceremonies_aggregated_account_data");
+				//Todo Master or Me?
+				if !is_ceremony_master(who) {
+					debug!("TrustedGetter ceremonies_aggregated_account_data, return: No master");
+					return None
+				}
 				let aggregated_account_data =
-					EncointerCeremonies::get_aggregated_account_data(community_id, &who);
-				//aggregated_account_data.personal.map(|p| p.encode())
+					EncointerCeremonies::get_aggregated_account_data(community_id, &account_id);
 				Some(aggregated_account_data.encode())
 			},
 			TrustedGetter::ceremonies_assignments(who, community_id, ceremony_index) => {
-				error!("TrustedGetter ceremonies_assignments");
+				debug!("TrustedGetter ceremonies_assignments");
 				// Block getter of confidential data if it is not the CeremonyMaster.
 				if !is_ceremony_master(who) {
-					error!("TrustedGetter ceremonies_assignments, return: No master");
+					debug!("TrustedGetter ceremonies_assignments, return: No master");
 					return None
 				}
 				let assignments = EncointerCeremonies::assignments((community_id, ceremony_index));
 				Some(assignments.encode())
+			},
+			TrustedGetter::ceremonies_meetup_participant_count_vote(
+				who,
+				community_id,
+				ceremony_index,
+				participant_account_id,
+			) => {
+				debug!("TrustedGetter ceremonies_meetup_participant_count_vote");
+				// Todo Master or Me?
+				// Block getter of confidential data if it is not the CeremonyMaster
+				if !is_ceremony_master(who) {
+					return None
+				}
+				Some(
+					EncointerCeremonies::meetup_participant_count_vote(
+						(community_id, ceremony_index),
+						&participant_account_id,
+					)
+					.encode(),
+				)
+			},
+			TrustedGetter::ceremonies_participant_attestees(
+				who,
+				community_id,
+				ceremony_index,
+				attestation_index,
+			) => {
+				debug!("TrustedGetter ceremonies_participant_attestees");
+				// Block getter of confidential data if it is not the CeremonyMaster
+				if !is_ceremony_master(who) {
+					return None
+				}
+				match EncointerCeremonies::attestation_registry(
+					(community_id, ceremony_index),
+					&attestation_index,
+				) {
+					Some(b) => Some(b.encode()),
+					_ => {
+						warn!(
+							"no attestees for {}, {}, {}",
+							community_id, ceremony_index, attestation_index
+						);
+						None
+					},
+				}
+			},
+			TrustedGetter::ceremonies_participant_attestation_index(
+				who,
+				community_id,
+				ceremony_index,
+				participant_account_id,
+			) => {
+				debug!("TrustedGetter ceremonies_participant_attestation_index");
+				//Todo Master or Me?
+				// Block getter of confidential data if it is not the CeremonyMaster
+				if !is_ceremony_master(who) {
+					return None
+				}
+				Some(
+					EncointerCeremonies::attestation_index(
+						(community_id, ceremony_index),
+						&participant_account_id,
+					)
+					.encode(),
+				)
 			},
 			TrustedGetter::ceremonies_registered_bootstrapper(
 				who,
@@ -576,17 +666,13 @@ impl ExecuteGetter for TrustedGetterSigned {
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
 		let mut key_hashes = Vec::new();
 		match self.getter {
-			TrustedGetter::ceremonies_aggregated_account_data(
-				_,
-				_community_id,
-				_ceremony_index,
-			) => {
+			TrustedGetter::ceremonies_aggregated_account_data(_, _, _) => {
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
 				let current_phase =
 					pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase(); // updated im block import
 				key_hashes.push(storage_map_key(
 					"EncointerScheduler",
-					"PhaseDuration",
+					"PhaseDurations",
 					&current_phase,
 					&StorageHasher::Blake2_128Concat,
 				));
@@ -606,6 +692,12 @@ impl ExecuteGetter for PublicGetter {
 			PublicGetter::some_value => Some(42u32.encode()),
 			PublicGetter::ceremonies_assignment_counts(community_id, ceremony_index) => {
 				let count = EncointerCeremonies::assignment_counts((community_id, ceremony_index));
+				Some(count.encode())
+			},
+			PublicGetter::ceremonies_attestation_count(community_id, ceremony_index) => {
+				let count = pallet_encointer_ceremonies::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::attestation_count((community_id, ceremony_index));
 				Some(count.encode())
 			},
 			PublicGetter::ceremonies_meetup_count(community_id, ceremony_index) => {

@@ -74,13 +74,13 @@ echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
 [[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
 echo ""
 
-echo ""
-echo "* Try to register //Alice, but community is not private! "
-$CLIENT trusted --mrenclave ${MRENCLAVE} register-participant //Alice ${COMMUNITY_IDENTIFIER}
-echo ""
-echo "* Listing participants: There is no participants! "
-$CLIENT trusted --mrenclave ${MRENCLAVE} list-participants //Alice ${COMMUNITY_IDENTIFIER}
-echo ""
+# echo ""
+# echo "* Try to register //Alice, but community is not private! "
+# $CLIENT trusted --mrenclave ${MRENCLAVE} register-participant //Alice ${COMMUNITY_IDENTIFIER}
+# echo ""
+# echo "* Listing participants: There is no participants! "
+# $CLIENT trusted --mrenclave ${MRENCLAVE} list-participants //Alice ${COMMUNITY_IDENTIFIER}
+# echo ""
 
 echo ""
 echo "* Migrating community ${COMMUNITY_IDENTIFIER} to private"
@@ -88,7 +88,7 @@ $CLIENT trusted --mrenclave ${MRENCLAVE} make-community-private //Alice ${COMMUN
 echo ""
 
 echo ""
-echo "* Registering 3 bootstrapper : "
+echo "* Registering 3 bootstrappers : "
 echo "  //Alice,"
 $CLIENT trusted --mrenclave ${MRENCLAVE} register-participant //Alice ${COMMUNITY_IDENTIFIER}
 echo "  //Bob"
@@ -116,4 +116,36 @@ sleep 10
 echo ""
 echo "* Listing Meetups"
 $CLIENT trusted --mrenclave ${MRENCLAVE} list-meetups //Alice ${COMMUNITY_IDENTIFIER}
+echo ""
+
+echo ""
+echo "* Performing Meetups"
+
+echo ""
+echo "* Triggering manually next phase: Attesting"
+$CLIENT next-phase //Alice
+echo ""
+
+echo " //Alice's attest attendees claim"
+$CLIENT trusted --mrenclave ${MRENCLAVE} attest-attendees //Alice ${COMMUNITY_IDENTIFIER} //Bob //Charlie //Cora
+echo ""
+
+echo " //Bob's attest attendees claim"
+$CLIENT trusted --mrenclave ${MRENCLAVE} attest-attendees //Bob ${COMMUNITY_IDENTIFIER} //Alice //Charlie //Cora
+echo ""
+
+echo " //Charlie's attest attendees claim"
+$CLIENT trusted --mrenclave ${MRENCLAVE} attest-attendees //Charlie ${COMMUNITY_IDENTIFIER} //Alice //Bob //Cora
+echo ""
+
+echo " //Cora's attest attendees claim"
+$CLIENT trusted --mrenclave ${MRENCLAVE} attest-attendees //Cora ${COMMUNITY_IDENTIFIER} //Alice //Charlie //Bob
+echo ""
+
+echo "* Waiting enough time, such that xt's are processed... 3 blocks 30 seconds"
+sleep 30
+
+echo ""
+echo "* Listing Attestees"
+$CLIENT trusted --mrenclave ${MRENCLAVE} list-attestees //Alice ${COMMUNITY_IDENTIFIER}
 echo ""

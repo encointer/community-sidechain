@@ -17,6 +17,7 @@
 
 use crate::{
 	ceremonies::commands::{
+		attest_attendees::AttestAttendeesCommand, list_attestees::ListAttesteesCommand,
 		list_meetups::ListMeetupsCommand, list_participants::ListParticipantsCommand,
 		register_participant::RegisterParticipantCommand,
 		upgrade_registration::UpgradeRegistrationCommand,
@@ -29,10 +30,12 @@ mod commands;
 
 #[derive(Debug, clap::Subcommand)]
 pub enum CeremoniesCommands {
+	AttestAttendees(AttestAttendeesCommand),
 	RegisterParticipant(RegisterParticipantCommand),
 	UpgradeRegistration(UpgradeRegistrationCommand),
-	ListParticipants(ListParticipantsCommand),
+	ListAttestees(ListAttesteesCommand),
 	ListMeetups(ListMeetupsCommand),
+	ListParticipants(ListParticipantsCommand),
 	/*
 		CeremoniesUnregisterParticipant(),
 		CeremoniesAttestAttendees(),
@@ -53,10 +56,12 @@ pub enum CeremoniesCommands {
 impl CeremoniesCommands {
 	pub fn run(&self, cli: &Cli, trusted_args: &TrustedArgs) {
 		match self {
+			CeremoniesCommands::AttestAttendees(cmd) => cmd.run(cli, trusted_args),
 			CeremoniesCommands::RegisterParticipant(cmd) => cmd.run(cli, trusted_args),
 			CeremoniesCommands::UpgradeRegistration(cmd) => cmd.run(cli, trusted_args),
-			CeremoniesCommands::ListParticipants(cmd) => cmd.run(cli, trusted_args),
+			CeremoniesCommands::ListAttestees(cmd) => cmd.run(cli, trusted_args),
 			CeremoniesCommands::ListMeetups(cmd) => cmd.run(cli, trusted_args),
+			CeremoniesCommands::ListParticipants(cmd) => cmd.run(cli, trusted_args),
 		}
 	}
 }
