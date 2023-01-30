@@ -219,7 +219,7 @@ pub fn get_meetup_index(
 		get_aggregated_account_data(cli, trusted_args, arg_who, community_identifier, account_id)?;
 	match account_data.personal {
 		Some(personal) => Ok(personal.meetup_index),
-		None => return Err(Error::Other("No personal data in AggregatedAccountData".into())),
+		None => Err(Error::Other("No personal data in AggregatedAccountData".into())),
 	}
 }
 
