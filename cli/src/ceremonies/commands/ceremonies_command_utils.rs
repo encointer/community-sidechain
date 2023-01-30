@@ -23,8 +23,9 @@ use codec::{Decode, Encode, Error as CodecError};
 use encointer_ceremonies_assignment::assignment_fn_inverse;
 use encointer_primitives::{
 	ceremonies::{
-		Assignment, AssignmentCount, CommunityCeremony, MeetupIndexType, ParticipantIndexType,
-		ParticipantType, ProofOfAttendance,
+		AggregatedAccountData, Assignment, AssignmentCount, AttestationIndexType,
+		CommunityCeremony, MeetupIndexType, ParticipantIndexType, ParticipantType,
+		ProofOfAttendance,
 	},
 	communities::{CommunityIdentifier, Location},
 	scheduler::CeremonyIndexType,
@@ -37,6 +38,7 @@ use log::*;
 use serde::{Deserialize, Serialize};
 use sp_application_crypto::Ss58Codec;
 use sp_core::{sr25519 as sr25519_core, Pair};
+use std::collections::HashMap;
 
 pub const ONE_DAY: Moment = 86_400_000;
 
@@ -87,6 +89,29 @@ impl CommunityCeremonyStats {
 		meetups: Vec<Meetup>,
 	) -> Self {
 		Self { community_ceremony, assignment, assignment_count, meetup_count, meetups }
+	}
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AttestationState {
+	pub community_ceremony: CommunityCeremony,
+	pub meetup_index: MeetupIndexType,
+	pub vote: u32,
+	pub attestation_index: u64,
+	pub attestor: AccountId,
+	pub attestees: Vec<AccountId>,
+}
+
+impl AttestationState {
+	pub fn new(
+		community_ceremony: CommunityCeremony,
+		meetup_index: MeetupIndexType,
+		vote: u32,
+		attestation_index: u64,
+		attestor: AccountId,
+		attestees: Vec<AccountId>,
+	) -> Self {
+		Self { community_ceremony, meetup_index, vote, attestation_index, attestor, attestees }
 	}
 }
 
@@ -161,57 +186,42 @@ pub fn get_ceremony_stats(
 	))
 }
 
-/*
 fn get_aggregated_account_data(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
 	arg_who: &str,
 	community_identifier: CommunityIdentifier,
-	ceremony_index: CeremonyIndexType,
 	account_id: AccountId,
-) -> Option<AggregatedAccountData<AccountId, Moment>> {
-	//signer: Master or Me (account_id)
+) -> Result<AggregatedAccountData<AccountId, Moment>, Error> {
 	let who = get_pair_from_str(trusted_args, arg_who);
 
-	//TODO account sign and param?
 	let top: TrustedOperation = TrustedGetter::ceremonies_aggregated_account_data(
-		account_id,
+		who.public().into(),
 		community_identifier,
-		ceremony_index,
+		account_id,
 	)
-	.sign(&KeyPair::Sr25519(who.clone()))
+	.sign(&KeyPair::Sr25519(who))
 	.into();
 
-	let encoded_data = perform_trusted_operation(cli, trusted_args, &top);
-	decode_aggregated_account_data(encoded_data)
+	let encoded_data = perform_trusted_operation(cli, trusted_args, &top)
+		.ok_or_else(|| Error::Other("AggregatedAccountData doesn't exist".into()))?;
+	Ok(Decode::decode(&mut encoded_data.as_slice())?)
 }
 
-fn get_meetup_index(
+pub fn get_meetup_index(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
 	arg_who: &str,
 	community_identifier: CommunityIdentifier,
-	ceremony_index: CeremonyIndexType,
 	account_id: AccountId,
-) -> Option<MeetupIndexType> {
-	if let Some(account_data) = get_aggregated_account_data(
-		cli,
-		trusted_args,
-		arg_who,
-		community_identifier,
-		ceremony_index,
-		account_id,
-	) {
-		match account_data.personal {
-			Some(personal) => return personal.meetup_index,
-			None => return None,
-		}
-	} else {
-		println!("aggregated account data: unknown");
+) -> Result<Option<MeetupIndexType>, Error> {
+	let account_data =
+		get_aggregated_account_data(cli, trusted_args, arg_who, community_identifier, account_id)?;
+	match account_data.personal {
+		Some(personal) => Ok(personal.meetup_index),
+		None => return Err(Error::Other("No personal data in AggregatedAccountData".into())),
 	}
-	None
 }
- */
 
 #[allow(clippy::too_many_arguments)]
 fn get_meetup_participants_with_type(
@@ -467,21 +477,41 @@ pub fn list_participants(encoded_participants: Option<Vec<u8>>) {
 		},
 	};
 }
-/*
-pub fn decode_aggregated_account_data(
-	encoded_data: Option<Vec<u8>>,
-) -> Option<AggregatedAccountData<AccountId, Moment>> {
-	encoded_data.and_then(|data| {
-		if let Ok(data_decoded) = Decode::decode(&mut data.as_slice()) {
-			Some(data_decoded)
-		} else {
-			error!("Could not decode the aggregated account data");
-			None
-		}
-	})
-}
 
- */
+pub fn participant_attestation_index_map(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	arg_who: &str,
+	community_identifier: CommunityIdentifier,
+	ceremony_index: CeremonyIndexType,
+	encoded_participants: Vec<u8>,
+) -> HashMap<AttestationIndexType, AccountId> {
+	let mut participants_attestation_indexes = HashMap::new();
+	let who = get_pair_from_str(trusted_args, arg_who);
+	match decode_participants(Some(encoded_participants)) {
+		Some(p) =>
+			for account_id in p {
+				let top: TrustedOperation =
+					TrustedGetter::ceremonies_participant_attestation_index(
+						who.public().into(),
+						community_identifier,
+						ceremony_index,
+						account_id.clone(),
+					)
+					.sign(&KeyPair::Sr25519(who.clone()))
+					.into();
+				if let Some(encoded_index) = perform_trusted_operation(cli, trusted_args, &top) {
+					if let Ok(index) = AttestationIndexType::decode(&mut encoded_index.as_slice()) {
+						participants_attestation_indexes.insert(index, account_id);
+					}
+				}
+			},
+		None => {
+			error!("participant_attestation_index_map: Couldn't decode participants");
+		},
+	};
+	participants_attestation_indexes
+}
 
 pub fn decode_participants(encoded_participants: Option<Vec<u8>>) -> Option<Vec<AccountId>> {
 	encoded_participants.and_then(|participants| {
