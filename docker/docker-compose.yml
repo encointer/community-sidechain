@@ -2,9 +2,11 @@ services:
   encointer-node:
     image: "encointer/encointer-node-notee:1.3.3-for-tee"
     container_name: encointer-node
+    environment:
+      - RUST_LOG=error
     networks:
       - encointer-test-network
-    command: --dev --rpc-methods unsafe --ws-external --rpc-external --ws-port 9912
+    command: --dev --enable-offchain-indexing true --rpc-methods unsafe --ws-external --rpc-external --ws-port 9912
     #logging:
       #driver: local
   encointer-worker-1:
@@ -40,6 +42,14 @@ services:
       /usr/local/bin/integritee-service --clean-reset --ws-external -M encointer-worker-2 -T wss://encointer-worker-2
       -u ws://encointer-node -U ws://encointer-worker-2 -P 2012 -w 2102 -p 9912 -h 4646
       run --dev --skip-ra --request-state"
+    restart: "no"
+  encointer-node-bootstrap-community:
+    image: "encointer/encointer-client-notee:1.3.3-for-tee"
+    container_name: encointer-node-bootstrap-community
+    depends_on: ['encointer-node', 'encointer-worker-1', 'encointer-worker-2']
+    networks:
+      - encointer-test-network
+    entrypoint: "./entryscript.sh bootstrap_demo_community.py -u ws://encointer-node --port 9912"
     restart: "no"
 networks:
   encointer-test-network:
