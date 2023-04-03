@@ -5,7 +5,7 @@ services:
     networks:
       - encointer-test-network
     healthcheck:
-      test: [ "CMD", "nc", "-z", "encointer-node-notee", "9912" ]
+      test: [ "CMD", "nc", "-z", "encointer-node", "9912" ]
       interval: 10s
       timeout: 10s
       retries: 6
