@@ -6,13 +6,18 @@ services:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-client
-    depends_on: ['encointer-node', 'encointer-worker-1', 'encointer-worker-2']
+    depends_on:
+      encointer-node:
+        condition: service_healthy
+      encointer-worker-1:
+        condition: service_healthy
+      encointer-worker-2:
+        condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,itc_rpc_client=warn
     networks:
       - encointer-test-network
-    entrypoint: "dockerize -wait http://encointer-worker-2:4646/is_initialized -timeout 250s
-      /usr/local/worker-cli/demo_smart_contract.sh -p 9912 -u ws://encointer-node
+    entrypoint: "/usr/local/worker-cli/demo_smart_contract.sh -p 9912 -u ws://encointer-node
       -V wss://encointer-worker-1 -A 2011 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
 networks:
