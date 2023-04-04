@@ -90,25 +90,22 @@ echo "* Migrating public community ${COMMUNITY_IDENTIFIER} to private"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} make-community-private //Alice ${COMMUNITY_IDENTIFIER}
 echo ""
 
-echo ""
-echo "* Registering 3 bootstrappers : "
+echo "* Registering participants : "
+echo "- Registering 3 bootstrappers : "
 echo "  //Alice,"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} register-participant //Alice ${COMMUNITY_IDENTIFIER}
 echo "  //Bob"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} register-participant //Bob ${COMMUNITY_IDENTIFIER}
 echo "  //Charlie"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} register-participant //Charlie ${COMMUNITY_IDENTIFIER}
-echo ""
-echo "* Registering a newbie //Cora "
+echo "- Registering a newbie //Cora "
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} register-participant //Cora ${COMMUNITY_IDENTIFIER}
 echo ""
 
-echo ""
 echo "* Listing participants "
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} list-participants //Alice ${COMMUNITY_IDENTIFIER}
 echo ""
 
-echo ""
 echo "* Triggering manually next phase: Assigning"
 $CLIENTWORKER1 next-phase //Alice
 echo ""
@@ -121,10 +118,9 @@ echo "* Listing Meetups"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} list-meetups //Alice ${COMMUNITY_IDENTIFIER}
 echo ""
 
+echo "* Performing Meetups : "
 echo ""
-echo "* Performing Meetups"
 
-echo ""
 echo "* Triggering manually next phase: Attesting"
 $CLIENTWORKER1 next-phase //Alice
 echo ""
@@ -147,8 +143,8 @@ echo ""
 
 echo "* Waiting enough time, such that xt's are processed... 30 seconds"
 sleep 30
-
 echo ""
+
 echo "* Listing Attestees"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} list-attestees //Alice ${COMMUNITY_IDENTIFIER}
 echo ""
@@ -169,34 +165,32 @@ echo ""
 
 echo "* Waiting enough time, such that xt's are processed... 30 seconds"
 sleep 30
+echo ""
 
+echo "* Check :  "
 echo ""
-echo "* Debug: "
-echo ""
-echo "** Community infos :"
-echo ""
+echo "Community infos :"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} community-infos //Alice ${COMMUNITY_IDENTIFIER}
 echo ""
 
 echo "Check Bob balances"
 
 echo "Initial balances"
-echo " in native currency: $INIT_BOB_NATIVE"
-echo " in community currency: $INIT_BOB_COMMUNITY_CURRENCY"
-echo ""
+echo "  in native currency: $INIT_BOB_NATIVE"
+echo "  in community currency: $INIT_BOB_COMMUNITY_CURRENCY"
 echo "After rewards"
 REWARDED_BOB_NATIVE=$(${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance //Bob | xargs)
-echo " in native currency: $REWARDED_BOB_NATIVE"
+echo "  in native currency: $REWARDED_BOB_NATIVE"
 REWARDED_BOB_COMMUNITY_CURRENCY=$(${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance //Bob ${COMMUNITY_IDENTIFIER} | xargs)
-echo " in community currency: $REWARDED_BOB_COMMUNITY_CURRENCY"
+echo "  in community currency: $REWARDED_BOB_COMMUNITY_CURRENCY"
 echo ""
 
 sleep 30
 echo "After some time (demurrage)"
 DEMURRAGE_BOB_NATIVE=$(${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance //Bob | xargs)
-echo " in native currency: $DEMURRAGE_BOB_NATIVE"
+echo "  in native currency: $DEMURRAGE_BOB_NATIVE"
 DEMURRAGE_BOB_COMMUNITY_CURRENCY=$(${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance //Bob ${COMMUNITY_IDENTIFIER} | xargs)
-echo " in community currency: $DEMURRAGE_BOB_COMMUNITY_CURRENCY"
+echo "  in community currency: $DEMURRAGE_BOB_COMMUNITY_CURRENCY"
 echo ""
 
 #Todo test

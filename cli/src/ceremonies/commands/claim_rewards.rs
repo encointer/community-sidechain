@@ -83,7 +83,7 @@ impl ClaimRewardsCommand {
 				let _ = perform_trusted_operation(cli, trusted_args, &top);
 				nonce += 1;
 			}
-			println!("Claiming reward for all meetup indexes executed ");
+			info!("Claiming reward for all meetup indexes executed ");
 		} else {
 			info!("Claim the rewards for all participants of 1 meetup");
 			let meetup_index = match &self.meetup_index {
@@ -99,7 +99,7 @@ impl ClaimRewardsCommand {
 			.into_trusted_operation(trusted_args.direct);
 
 			let _ = perform_trusted_operation(cli, trusted_args, &top);
-			println!("Claiming reward for all participant of meetup {:?} executed ", meetup_index);
+			info!("Claiming reward for all participant of meetup {:?} executed ", meetup_index);
 		}
 	}
 }

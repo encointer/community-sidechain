@@ -7,10 +7,13 @@ This is part of [Encointer](https://github.com/encointer)
 
 The Encointer community-sidechain is a service that provides privacy to Encointer. Privacy-sensitive pallets (encointer_balances and encointer_ceremonies pallets) are executed on the sidechain, inside a trusted execution environment. 
 
-##Private community Demo
+##Private Community Demo
 Meetups of a private community are held confidentially, they are performed on the sidechain. The location and participants of a meetup are not publicly leaked. Balances and transactions are also on the sidechain, so users' balances and consumption profiles remain confidential.
 
+The demo can be run in the docker. See [docker/README.md](docker/README.md)
+
 The demo ```demo-private-community.sh``` shows the execution of a private community ceremony. Alice (sudo) is the community manager.
+
 - A private community (on the sidechain), with id : sqm1v79dF6b, is created from a public community (on the encointer node).
 - We are in the registration phase. 3 bootstrappers an 1 newbie register for the next meetup on the sidechain with a trusted call. 
   Bob trusted call is 
