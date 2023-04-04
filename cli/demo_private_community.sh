@@ -86,7 +86,7 @@ echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
 echo ""
 
 echo ""
-echo "* Migrating community ${COMMUNITY_IDENTIFIER} to private"
+echo "* Migrating public community ${COMMUNITY_IDENTIFIER} to private"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} make-community-private //Alice ${COMMUNITY_IDENTIFIER}
 echo ""
 
@@ -129,23 +129,23 @@ echo "* Triggering manually next phase: Attesting"
 $CLIENTWORKER1 next-phase //Alice
 echo ""
 
-echo " //Alice's attest attendees claim"
+echo " //Alice attests the other attendees "
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} attest-attendees //Alice ${COMMUNITY_IDENTIFIER} //Bob //Charlie //Cora
 echo ""
 
-echo " //Bob's attest attendees claim"
+echo " //Bob attests the other attendees"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} attest-attendees //Bob ${COMMUNITY_IDENTIFIER} //Alice //Charlie //Cora
 echo ""
 
-echo " //Charlie's attest attendees claim"
+echo " //Charlie attests the other attendees"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} attest-attendees //Charlie ${COMMUNITY_IDENTIFIER} //Alice //Bob //Cora
 echo ""
 
-echo " //Cora's attest attendees claim"
+echo " //Cora attests the other attendees"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} attest-attendees //Cora ${COMMUNITY_IDENTIFIER} //Alice //Charlie //Bob
 echo ""
 
-echo "* Waiting enough time, such that xt's are processed... 3 blocks 30 seconds"
+echo "* Waiting enough time, such that xt's are processed... 30 seconds"
 sleep 30
 
 echo ""
@@ -155,27 +155,28 @@ echo ""
 
 # Debug Bob initial balances
 #echo "Get balance (native currency) of Bob's incognito account"
-INIT_BOB_NATIVE=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} balance //Bob | xargs)
+INIT_BOB_NATIVE=$(${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance //Bob | xargs)
 #echo $INIT_BOB_NATIVE
 #echo ""
 #echo "Get balance (community currency) of Bob's account"
-INIT_BOB_COMMUNITY_CURRENCY=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} balance //Bob ${COMMUNITY_IDENTIFIER} | xargs)
+INIT_BOB_COMMUNITY_CURRENCY=$(${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance //Bob ${COMMUNITY_IDENTIFIER} | xargs)
 #echo $INIT_BOB_COMMUNITY_CURRENCY
 #echo ""
 
-echo "* Claiming early rewards for all participants in Alice's meetup"
-$CLIENT trusted --mrenclave ${MRENCLAVE} claim-rewards //Alice ${COMMUNITY_IDENTIFIER}
+echo "* Claiming early rewards for all participants in Bob's meetup"
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} claim-rewards //Bob ${COMMUNITY_IDENTIFIER}
 echo ""
 
-echo "* Waiting enough time, such that xt's are processed... 3 blocks"
-sleep 20
+echo "* Waiting enough time, such that xt's are processed... 30 seconds"
+sleep 30
 
 echo ""
-echo "* Debug"
+echo "* Debug: "
 echo ""
 echo "** Community infos :"
 echo ""
-$CLIENT trusted --mrenclave ${MRENCLAVE} community-infos //Alice ${COMMUNITY_IDENTIFIER}
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} community-infos //Alice ${COMMUNITY_IDENTIFIER}
+echo ""
 
 echo "Check Bob balances"
 
@@ -184,17 +185,17 @@ echo " in native currency: $INIT_BOB_NATIVE"
 echo " in community currency: $INIT_BOB_COMMUNITY_CURRENCY"
 echo ""
 echo "After rewards"
-REWARDED_BOB_NATIVE=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} balance //Bob | xargs)
+REWARDED_BOB_NATIVE=$(${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance //Bob | xargs)
 echo " in native currency: $REWARDED_BOB_NATIVE"
-REWARDED_BOB_COMMUNITY_CURRENCY=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} balance //Bob ${COMMUNITY_IDENTIFIER} | xargs)
+REWARDED_BOB_COMMUNITY_CURRENCY=$(${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance //Bob ${COMMUNITY_IDENTIFIER} | xargs)
 echo " in community currency: $REWARDED_BOB_COMMUNITY_CURRENCY"
 echo ""
 
 sleep 30
 echo "After some time (demurrage)"
-DEMURRAGE_BOB_NATIVE=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} balance //Bob | xargs)
+DEMURRAGE_BOB_NATIVE=$(${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance //Bob | xargs)
 echo " in native currency: $DEMURRAGE_BOB_NATIVE"
-DEMURRAGE_BOB_COMMUNITY_CURRENCY=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} balance //Bob ${COMMUNITY_IDENTIFIER} | xargs)
+DEMURRAGE_BOB_COMMUNITY_CURRENCY=$(${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance //Bob ${COMMUNITY_IDENTIFIER} | xargs)
 echo " in community currency: $DEMURRAGE_BOB_COMMUNITY_CURRENCY"
 echo ""
 
