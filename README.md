@@ -36,7 +36,7 @@ The demo ```demo-private-community.sh``` shows the execution of a private commun
 - The community manager Alice checks the community infos.
 - Participants got their community incomes: 
   
-  Ex: Bob's' balance in Community currency increases by  . But his balance in native currency is still
+  Ex: Bob's' balance in Community currency increases by the reward Community income. But his balance in native currency is still 0.
 - After some time, Bob's balance decreases because of demurrage.  
  
 
