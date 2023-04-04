@@ -1,7 +1,7 @@
 services:
-  sidechain-benchmark:
+  demo-private-community:
     image: encointer-cli:dev
-    container_name: integritee-benchmark
+    container_name: encointer-private-community-demo
     build:
       context: ..
       dockerfile: build.Dockerfile
@@ -13,10 +13,12 @@ services:
         condition: service_healthy
       encointer-worker-2:
         condition: service_healthy
+      encointer-node-bootstrap-community:
+        condition: service_completed_successfully
     networks:
       - encointer-test-network
-    entrypoint: "/usr/local/worker-cli/benchmark.sh -p 9912 -A 2011 -u ws://encointer-node
-      -V wss://encointer-worker-1 -C /usr/local/bin/integritee-cli 2>&1"
+    entrypoint: "/usr/local/worker-cli/demo_private_community.sh -p 9912 -A 2011 -B 2012 -u ws://encointer-node
+      -V wss://encointer-worker-1 -W wss://encointer-worker-2 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
 networks:
   encointer-test-network:

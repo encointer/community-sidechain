@@ -173,6 +173,9 @@ jobs:
           - test: EVM
             flavor_id: sidechain-evm
             demo_name: demo-smart-contract
+          - test: Private_Community
+            flavor_id: sidechain
+            demo_name: demo-private-community
 
     steps:
       - uses: actions/checkout@v3

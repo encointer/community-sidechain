@@ -20,25 +20,31 @@ trap "echo The demo is terminated (SIGTERM); exit 1" SIGTERM
 # usage:
 #   demo_private_community.sh -p <NODEPORT> -P <WORKERPORT> -u <NODE_URL> -V <WORKER_URL> -C <CLIENT_BINARY_PATH>
 
-while getopts ":p:P:d:i:u:V:C:" opt; do
+while getopts ":m:p:A:B:t:u:W:V:C:" opt; do
     case $opt in
+        t)
+            TEST=$OPTARG
+            ;;
+        m)
+            READMRENCLAVE=$OPTARG
+            ;;
         p)
             NPORT=$OPTARG
             ;;
-        P)
+        A)
             WORKER1PORT=$OPTARG
             ;;
-        d)
-            DURATION=$OPTARG
-            ;;
-        i)
-            INTERVAL=$OPTARG
+        B)
+            WORKER2PORT=$OPTARG
             ;;
         u)
             NODEURL=$OPTARG
             ;;
         V)
             WORKER1URL=$OPTARG
+            ;;
+        W)
+            WORKER2URL=$OPTARG
             ;;
         C)
             CLIENT_BIN=$OPTARG
@@ -53,22 +59,27 @@ NODEURL=${NODEURL:-"ws://127.0.0.1"}
 WORKER1PORT=${WORKER1PORT:-2000}
 WORKER1URL=${WORKER1URL:-"wss://127.0.0.1"}
 
+WORKER2PORT=${WORKER2PORT:-3000}
+WORKER2URL=${WORKER2URL:-"wss://127.0.0.1"}
+
 CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 COMMUNITY_IDENTIFIER="sqm1v79dF6b"
 
 echo "Using client binary ${CLIENT_BIN}"
 echo "Using node uri ${NODEURL}:${NPORT}"
 echo "Using trusted-worker uri ${WORKER1URL}:${WORKER1PORT}"
+echo "Using trusted-worker-2 uri ${WORKER2URL}:${WORKER2PORT}"
 echo "Using community ${COMMUNITY_IDENTIFIER}"
 
-CLIENT="${CLIENT_BIN} -p ${NPORT} -P ${WORKER1PORT} -u ${NODEURL} -U ${WORKER1URL}"
+CLIENTWORKER1="${CLIENT_BIN} -p ${NPORT} -P ${WORKER1PORT} -u ${NODEURL} -U ${WORKER1URL}"
+CLIENTWORKER2="${CLIENT_BIN} -p ${NPORT} -P ${WORKER2PORT} -u ${NODEURL} -U ${WORKER2URL}"
 
 echo "* Query on-chain enclave registry:"
-${CLIENT} list-workers
+${CLIENTWORKER1} list-workers
 echo ""
 
 # this will always take the first MRENCLAVE found in the registry !!
-read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2; exit }')
+read MRENCLAVE <<< $($CLIENTWORKER1 list-workers | awk '/  MRENCLAVE: / { print $2; exit }')
 echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
 
 [[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
@@ -76,38 +87,38 @@ echo ""
 
 # echo ""
 # echo "* Try to register //Alice, but community is not private! "
-# $CLIENT trusted --mrenclave ${MRENCLAVE} register-participant //Alice ${COMMUNITY_IDENTIFIER}
+# $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} register-participant //Alice ${COMMUNITY_IDENTIFIER}
 # echo ""
 # echo "* Listing participants: There is no participants! "
-# $CLIENT trusted --mrenclave ${MRENCLAVE} list-participants //Alice ${COMMUNITY_IDENTIFIER}
+# $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} list-participants //Alice ${COMMUNITY_IDENTIFIER}
 # echo ""
 
 echo ""
 echo "* Migrating community ${COMMUNITY_IDENTIFIER} to private"
-$CLIENT trusted --mrenclave ${MRENCLAVE} make-community-private //Alice ${COMMUNITY_IDENTIFIER}
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} make-community-private //Alice ${COMMUNITY_IDENTIFIER}
 echo ""
 
 echo ""
 echo "* Registering 3 bootstrappers : "
 echo "  //Alice,"
-$CLIENT trusted --mrenclave ${MRENCLAVE} register-participant //Alice ${COMMUNITY_IDENTIFIER}
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} register-participant //Alice ${COMMUNITY_IDENTIFIER}
 echo "  //Bob"
-$CLIENT trusted --mrenclave ${MRENCLAVE} register-participant //Bob ${COMMUNITY_IDENTIFIER}
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} register-participant //Bob ${COMMUNITY_IDENTIFIER}
 echo "  //Charlie"
-$CLIENT trusted --mrenclave ${MRENCLAVE} register-participant //Charlie ${COMMUNITY_IDENTIFIER}
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} register-participant //Charlie ${COMMUNITY_IDENTIFIER}
 echo ""
 echo "* Registering a newbie //Cora "
-$CLIENT trusted --mrenclave ${MRENCLAVE} register-participant //Cora ${COMMUNITY_IDENTIFIER}
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} register-participant //Cora ${COMMUNITY_IDENTIFIER}
 echo ""
 
 echo ""
 echo "* Listing participants "
-$CLIENT trusted --mrenclave ${MRENCLAVE} list-participants //Alice ${COMMUNITY_IDENTIFIER}
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} list-participants //Alice ${COMMUNITY_IDENTIFIER}
 echo ""
 
 echo ""
 echo "* Triggering manually next phase: Assigning"
-$CLIENT next-phase //Alice
+$CLIENTWORKER1 next-phase //Alice
 echo ""
 
 echo "* Waiting 10 seconds"
@@ -115,7 +126,7 @@ sleep 10
 
 echo ""
 echo "* Listing Meetups"
-$CLIENT trusted --mrenclave ${MRENCLAVE} list-meetups //Alice ${COMMUNITY_IDENTIFIER}
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} list-meetups //Alice ${COMMUNITY_IDENTIFIER}
 echo ""
 
 echo ""
@@ -123,23 +134,23 @@ echo "* Performing Meetups"
 
 echo ""
 echo "* Triggering manually next phase: Attesting"
-$CLIENT next-phase //Alice
+$CLIENTWORKER1 next-phase //Alice
 echo ""
 
 echo " //Alice's attest attendees claim"
-$CLIENT trusted --mrenclave ${MRENCLAVE} attest-attendees //Alice ${COMMUNITY_IDENTIFIER} //Bob //Charlie //Cora
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} attest-attendees //Alice ${COMMUNITY_IDENTIFIER} //Bob //Charlie //Cora
 echo ""
 
 echo " //Bob's attest attendees claim"
-$CLIENT trusted --mrenclave ${MRENCLAVE} attest-attendees //Bob ${COMMUNITY_IDENTIFIER} //Alice //Charlie //Cora
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} attest-attendees //Bob ${COMMUNITY_IDENTIFIER} //Alice //Charlie //Cora
 echo ""
 
 echo " //Charlie's attest attendees claim"
-$CLIENT trusted --mrenclave ${MRENCLAVE} attest-attendees //Charlie ${COMMUNITY_IDENTIFIER} //Alice //Bob //Cora
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} attest-attendees //Charlie ${COMMUNITY_IDENTIFIER} //Alice //Bob //Cora
 echo ""
 
 echo " //Cora's attest attendees claim"
-$CLIENT trusted --mrenclave ${MRENCLAVE} attest-attendees //Cora ${COMMUNITY_IDENTIFIER} //Alice //Charlie //Bob
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} attest-attendees //Cora ${COMMUNITY_IDENTIFIER} //Alice //Charlie //Bob
 echo ""
 
 echo "* Waiting enough time, such that xt's are processed... 3 blocks 30 seconds"
@@ -147,5 +158,8 @@ sleep 30
 
 echo ""
 echo "* Listing Attestees"
-$CLIENT trusted --mrenclave ${MRENCLAVE} list-attestees //Alice ${COMMUNITY_IDENTIFIER}
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} list-attestees //Alice ${COMMUNITY_IDENTIFIER}
 echo ""
+
+# Add test here
+exit 0
