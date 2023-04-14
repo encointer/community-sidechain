@@ -27,7 +27,8 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use encointer_primitives::{
-	ceremonies::ProofOfAttendance,
+	balances::{BalanceType, FeeConversionFactorType},
+	ceremonies::{MeetupIndexType, ProofOfAttendance},
 	communities::{CommunityIdentifier, Location},
 	scheduler::CeremonyPhaseType,
 };
@@ -59,12 +60,11 @@ pub enum TrustedCall {
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
-	/*
 	encointer_balance_transfer(AccountId, AccountId, CommunityIdentifier, BalanceType),
 	encointer_set_fee_conversion_factor(AccountId, FeeConversionFactorType),
-	encointer_transfer_all(AccountId, AccountId, CommunityIdentifier),
-	*/
+	encointer_balance_transfer_all(AccountId, AccountId, CommunityIdentifier),
 	ceremonies_attest_attendees(AccountId, CommunityIdentifier, u32, Vec<AccountId>),
+	ceremonies_claim_rewards(AccountId, CommunityIdentifier, Option<MeetupIndexType>),
 	ceremonies_register_participant(
 		AccountId,
 		CommunityIdentifier,
@@ -78,7 +78,6 @@ pub enum TrustedCall {
 	),
 	ceremonies_unregister_participant(AccountId, CommunityIdentifier, Option<CommunityCeremony>),
 	ceremonies_endorse_newcomer(AccountId, CommunityIdentifier, AccountId),
-	ceremonies_claim_rewards(AccountId, CommunityIdentifier, Option<MeetupIndexType>),
 	ceremonies_set_inactivity_timeout(AccountId, InactivityTimeoutType),
 	ceremonies_set_endorsement_tickets_per_bootstrapper(AccountId, EndorsementTicketsType),
 	ceremonies_set_endorsement_tickets_per_reputable(AccountId, EndorsementTicketsType),
@@ -143,10 +142,11 @@ impl TrustedCall {
 			TrustedCall::balance_transfer(sender_account, ..) => sender_account,
 			TrustedCall::balance_unshield(sender_account, ..) => sender_account,
 			TrustedCall::balance_shield(sender_account, ..) => sender_account,
-			//TrustedCall::encointer_balance_transfer(sender_account, ..) => sender_account,
-			//TrustedCall::encointer_set_fee_conversion_factor(sender_account, ..) => sender_account,
-			//TrustedCall::encointer_transfer_all(sender_account, ..) => sender_account,
+			TrustedCall::encointer_balance_transfer(sender_account, ..) => sender_account,
+			TrustedCall::encointer_set_fee_conversion_factor(sender_account, ..) => sender_account,
+			TrustedCall::encointer_balance_transfer_all(sender_account, ..) => sender_account,
 			TrustedCall::ceremonies_attest_attendees(sender_account, ..) => sender_account,
+			TrustedCall::ceremonies_claim_rewards(sender_account, ..) => sender_account,
 			TrustedCall::ceremonies_register_participant(sender_account, ..) => sender_account,
 			TrustedCall::ceremonies_migrate_to_private_community(sender_account, ..) =>
 				sender_account,
@@ -156,7 +156,6 @@ impl TrustedCall {
 			TrustedCall::ceremonies_upgrade_registration(sender_account, ..) => sender_account,
 			TrustedCall::ceremonies_unregister_participant(sender_account, ..) => sender_account,
 			TrustedCall::ceremonies_endorse_newcomer(sender_account, ..) => sender_account,
-			TrustedCall::ceremonies_claim_rewards(sender_account, ..) => sender_account,
 			TrustedCall::ceremonies_set_inactivity_timeout(sender_account, ..) => sender_account,
 			TrustedCall::ceremonies_set_endorsement_tickets_per_bootstrapper(
 				sender_account,
@@ -312,7 +311,6 @@ impl ExecuteCall for TrustedCallSigned {
 				shield_funds(who, value)?;
 				Ok(())
 			},
-			/*
 			TrustedCall::encointer_balance_transfer(from, to, community_id, value) => {
 				let origin = ita_sgx_runtime::Origin::signed(from.clone());
 				debug!(
@@ -337,6 +335,8 @@ impl ExecuteCall for TrustedCallSigned {
 				Ok(())
 			},
 			TrustedCall::encointer_set_fee_conversion_factor(who, fee_conversion_factor) => {
+				//Block getter of confidential data if it is not the CeremonyMaster
+				ensure!(is_ceremony_master(who.clone()), Self::Error::MissingMasterPrivileges(who));
 				let origin = ita_sgx_runtime::Origin::signed(who.clone());
 				debug!(
 					"encointer_set_fee_conversion_factor({}, {})",
@@ -355,10 +355,10 @@ impl ExecuteCall for TrustedCallSigned {
 				})?;
 				Ok(())
 			},
-			TrustedCall::encointer_transfer_all(from, to, community_id) => {
+			TrustedCall::encointer_balance_transfer_all(from, to, community_id) => {
 				let origin = ita_sgx_runtime::Origin::signed(from.clone());
 				debug!(
-					"encointer_transfer_all({}, {}, {})",
+					"encointer_balance_transfer_all({}, {}, {})",
 					account_id_to_string(&from),
 					account_id_to_string(&to),
 					community_id
@@ -377,7 +377,6 @@ impl ExecuteCall for TrustedCallSigned {
 				Ok(())
 			},
 
-			 */
 			TrustedCall::ceremonies_attest_attendees(
 				who,
 				cid,
@@ -397,6 +396,27 @@ impl ExecuteCall for TrustedCallSigned {
 						"Ceremonies attendees attestation error: {:?}",
 						e.error
 					))
+				})?;
+				Ok(())
+			},
+			TrustedCall::ceremonies_claim_rewards(who, cid, maybe_meetup_index) => {
+				let origin = ita_sgx_runtime::Origin::signed(who);
+
+				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
+					== CeremonyPhaseType::Assigning
+				{
+					return Err(Self::Error::Dispatch(
+						"claiming rewards can not be done during assigning phase".to_string(),
+					))
+				}
+
+				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::claim_rewards {
+					cid,
+					maybe_meetup_index,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!("Ceremonies claim rewards error: {:?}", e.error))
 				})?;
 				Ok(())
 			},
@@ -558,27 +578,6 @@ impl ExecuteCall for TrustedCallSigned {
 						"Ceremonies endorse newcomer error: {:?}",
 						e.error
 					))
-				})?;
-				Ok(())
-			},
-			TrustedCall::ceremonies_claim_rewards(who, cid, maybe_meetup_index) => {
-				let origin = ita_sgx_runtime::Origin::signed(who);
-
-				if pallet_encointer_scheduler::Pallet::<ita_sgx_runtime::Runtime>::current_phase()
-					== CeremonyPhaseType::Assigning
-				{
-					return Err(Self::Error::Dispatch(
-						"claiming rewards can not be done during assigning phase".to_string(),
-					))
-				}
-
-				ita_sgx_runtime::EncointerCeremoniesCall::<Runtime>::claim_rewards {
-					cid,
-					maybe_meetup_index,
-				}
-				.dispatch_bypass_filter(origin)
-				.map_err(|e| {
-					Self::Error::Dispatch(format!("Ceremonies claim rewards error: {:?}", e.error))
 				})?;
 				Ok(())
 			},
@@ -856,7 +855,6 @@ impl ExecuteCall for TrustedCallSigned {
 			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
-			/*
 			TrustedCall::encointer_balance_transfer(_, _, cid, _) => {
 				key_hashes.push(storage_map_key(
 					"EncointerBalances",
@@ -867,7 +865,7 @@ impl ExecuteCall for TrustedCallSigned {
 			},
 			TrustedCall::encointer_set_fee_conversion_factor(_, _) =>
 				debug!("No storage updates needed..."),
-			TrustedCall::encointer_transfer_all(_, _, cid) => {
+			TrustedCall::encointer_balance_transfer_all(_, _, cid) => {
 				key_hashes.push(storage_map_key(
 					"EncointerBalances",
 					"DemurragePerBlock",
@@ -875,6 +873,7 @@ impl ExecuteCall for TrustedCallSigned {
 					&StorageHasher::Blake2_128Concat,
 				));
 			},
+			/*
 			TrustedCall::ceremonies_set_inactivity_timeout(_, _) =>
 				debug!("No storage updates needed..."),
 			TrustedCall::ceremonies_set_endorsement_tickets_per_bootstrapper(_, _) =>
@@ -898,10 +897,31 @@ impl ExecuteCall for TrustedCallSigned {
 				key_hashes.push(storage_value_key("EncointerScheduler", "PhaseDurations"));
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
 			},
+			TrustedCall::ceremonies_claim_rewards(_, cid, _) => {
+				key_hashes.push(storage_map_key(
+					"EncointerBalances",
+					"DemurragePerBlock",
+					&cid,
+					&StorageHasher::Blake2_128Concat,
+				));
+				key_hashes.push(storage_map_key(
+					"EncointerCommunities",
+					"NominalIncome",
+					&cid,
+					&StorageHasher::Blake2_128Concat,
+				));
+				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
+			},
 			TrustedCall::ceremonies_register_participant(_, _, _) => {
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
 			},
 			TrustedCall::ceremonies_migrate_to_private_community(_, cid, _) => {
+				key_hashes.push(storage_map_key(
+					"EncointerBalances",
+					"DemurragePerBlock",
+					&cid,
+					&StorageHasher::Blake2_128Concat,
+				));
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
 				key_hashes.push(storage_map_key(
 					"EncointerCommunities",
@@ -942,16 +962,6 @@ impl ExecuteCall for TrustedCallSigned {
 			TrustedCall::communities_add_location(_, _, _) =>
 				debug!("No storage updates needed..."),
 			/*
-			TrustedCall::ceremonies_claim_rewards(_, cid, _) => {
-				key_hashes.push(storage_value_key("EncointerCommunities", "CommunityIdentifiers"));
-				key_hashes.push(storage_value_key("EncointerCommunities", "NominalIncome"));
-				key_hashes.push(storage_map_key(
-					"EncointerBalances",
-					"DemurragePerBlock",
-					&cid,
-					&StorageHasher::Blake2_128Concat,
-				));
-			},
 			TrustedCall::ceremonies_set_meetup_time_offset(_, _) =>
 				debug!("No storage updates needed..."),
 			TrustedCall::ceremonies_endorse_newcomer(_, cid, _) => {

@@ -14,13 +14,17 @@
 	limitations under the License.
 
 */
+use codec::Decode;
+use encointer_primitives::balances::BalanceType;
+use log::*;
 
-pub mod attest_attendees;
-pub mod ceremonies_command_utils;
-pub mod claim_rewards;
-pub mod community_infos;
-pub mod list_attestees;
-pub mod list_meetups;
-pub mod list_participants;
-pub mod register_participant;
-pub mod upgrade_registration;
+pub fn decode_encointer_balance(maybe_encoded_balance: Option<Vec<u8>>) -> Option<BalanceType> {
+	maybe_encoded_balance.and_then(|encoded_balance| {
+		if let Ok(vd) = BalanceType::decode(&mut encoded_balance.as_slice()) {
+			Some(vd)
+		} else {
+			error!("Could not decode balance. maybe hasn't been set? {:x?}", encoded_balance);
+			None
+		}
+	})
+}

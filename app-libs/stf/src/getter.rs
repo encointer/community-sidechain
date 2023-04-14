@@ -66,21 +66,26 @@ impl From<TrustedGetterSigned> for Getter {
 #[allow(non_camel_case_types)]
 pub enum PublicGetter {
 	some_value,
+	encointer_total_issuance(CommunityIdentifier),
 	ceremonies_assignment_counts(CommunityIdentifier, CeremonyIndexType),
 	ceremonies_attestation_count(CommunityIdentifier, CeremonyIndexType),
 	ceremonies_meetup_count(CommunityIdentifier, CeremonyIndexType),
 	ceremonies_meetup_time_offset(),
 	ceremonies_registered_bootstrappers_count(CommunityIdentifier, CeremonyIndexType),
-	ceremonies_registered_reputables_count(CommunityIdentifier, CeremonyIndexType),
-	ceremonies_registered_endorsee_count(CommunityIdentifier, CeremonyIndexType),
-	ceremonies_registered_newbies_count(CommunityIdentifier, CeremonyIndexType),
 	ceremonies_registered_endorsees_count(CommunityIdentifier, CeremonyIndexType),
+	ceremonies_registered_newbies_count(CommunityIdentifier, CeremonyIndexType),
+	ceremonies_registered_reputables_count(CommunityIdentifier, CeremonyIndexType),
+	ceremonies_reward(CommunityIdentifier),
 	/*
-	   encointer_total_issuance(CommunityIdentifier),
-	   ceremonies_reward(CommunityIdentifier),
+	   encointer_scheduler_state(CommunityIdentifier),
 	   ceremonies_location_tolerance(CommunityIdentifier),
 	   ceremonies_time_tolerance(CommunityIdentifier),
-	   encointer_scheduler_state(CommunityIdentifier),
+	   ceremonies_issued_rewards(CommunityIdentifier, CeremonyIndexType, MeetupIndexType),
+	   ceremonies_inactivity_counters(CommunityIdentifier, CeremonyIndexType),
+	   ceremonies_inactivity_timeout(CommunityIdentifier),
+	   ceremonies_endorsement_tickets_per_bootstrapper(CommunityIdentifier),
+	   ceremonies_endorsement_tickets_per_reputable(CommunityIdentifier),
+	   ceremonies_reputation_lifetime(CommunityIdentifier),
 	*/
 }
 
@@ -90,12 +95,9 @@ pub enum TrustedGetter {
 	free_balance(AccountId),
 	reserved_balance(AccountId),
 	nonce(AccountId),
-	//encointer_balance(AccountId, CommunityIdentifier),
-	//ceremonies_participant_index(AccountId, CommunityIdentifier),
-	//Not public : ceremonies_meetup_index(AccountId, CommunityIdentifier),
+	encointer_balance(AccountId, CommunityIdentifier),
 	ceremonies_aggregated_account_data(AccountId, CommunityIdentifier, AccountId),
 	ceremonies_assignments(AccountId, CommunityIdentifier, CeremonyIndexType),
-	//ceremonies_meetup_locations(AccountId, CommunityIdentifier, CeremonyIndexType, MeetupIndexType),
 	//ceremonies_reputations(AccountId, CommunityIdentifier),
 	//ceremonies_participant_reputation(AccountId, CommunityIdentifier, CeremonyIndexType),
 	ceremonies_meetup_participant_count_vote(
@@ -144,12 +146,10 @@ pub enum TrustedGetter {
 		ParticipantIndexType,
 	),
 	ceremonies_registered_newbies(AccountId, CommunityIdentifier, CeremonyIndexType),
-	//from ceremonies_aggregated_account_data: ceremonies_meetup_time_and_location(AccountId, CommunityIdentifier),
-	//from ceremonies_aggregated_account_data: ceremonies_registration(AccountId, CommunityIdentifier),
-	//Ceremonie Master
-	//ceremonies_meetups(AccountId, CommunityIdentifier),
-	//ceremonies_attestees(AccountId, CommunityIdentifier),
-	//todo meetup_registery? ceremonies_meetup_registry(AccountId, CommunityIdentifier),
+
+	//bootstrapper_newbie_tickets(CommunityIdentifier, CeremonyIndexType,AccountId),
+	//reputable_newbie_tickets(CommunityIdentifier, CeremonyIndexType,AccountId),
+	//ceremonies_reputations(AccountId, CommunityIdentifier),
 	#[cfg(feature = "evm")]
 	evm_nonce(AccountId),
 	#[cfg(feature = "evm")]
@@ -164,13 +164,10 @@ impl TrustedGetter {
 			TrustedGetter::free_balance(sender_account) => sender_account,
 			TrustedGetter::reserved_balance(sender_account) => sender_account,
 			TrustedGetter::nonce(sender_account) => sender_account,
-			//TrustedGetter::encointer_balance(sender_account, _) => sender_account,
-			//TrustedGetter::ceremonies_participant_index(sender_account, _) => sender_account,
-			//TrustedGetter::ceremonies_attestations(sender_account, _) => sender_account,
+			TrustedGetter::encointer_balance(sender_account, _) => sender_account,
 			TrustedGetter::ceremonies_aggregated_account_data(sender_account, _, _) =>
 				sender_account,
 			TrustedGetter::ceremonies_assignments(sender_account, _, _) => sender_account,
-			//TrustedGetter::ceremonies_meetup_locations(sender_account, _, _, _) => sender_account,
 			TrustedGetter::ceremonies_meetup_participant_count_vote(sender_account, _, _, _) =>
 				sender_account,
 			TrustedGetter::ceremonies_participant_attestees(sender_account, _, _, _) =>
@@ -189,8 +186,6 @@ impl TrustedGetter {
 			TrustedGetter::ceremonies_registered_endorsees(sender_account, _, _) => sender_account,
 			TrustedGetter::ceremonies_registered_newbie(sender_account, _, _, _) => sender_account,
 			TrustedGetter::ceremonies_registered_newbies(sender_account, _, _) => sender_account,
-			//TrustedGetter::ceremonies_meetups(sender_account, _) => sender_account,
-			//TrustedGetter::ceremonies_attestees(sender_account, _) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_nonce(sender_account) => sender_account,
 			#[cfg(feature = "evm")]
@@ -263,33 +258,25 @@ impl ExecuteGetter for TrustedGetterSigned {
 				debug!("Account nonce is {}", nonce);
 				Some(nonce.encode())
 			},
-			/*
-			TrustedGetter::encointer_balance(who, currency_id) => {
-				let balance: BalanceEntry<BlockNumber> = pallet_encointer_balances::Pallet::<
-					ita_sgx_runtime::Runtime,
-				>::balance_entry(currency_id, who);
+			TrustedGetter::encointer_balance(who, community_id) => {
+				let balance =
+					pallet_encointer_balances::Pallet::<ita_sgx_runtime::Runtime>::balance(
+						community_id,
+						&who,
+					);
 				debug!("TrustedGetter encointer_balance");
 				Some(balance.encode())
 			},
-			TrustedGetter::ceremonies_participant_index(who, currency_id) => {
-				let ceremony_index = pallet_encointer_scheduler::Pallet::<
-					ita_sgx_runtime::Runtime,
-				>::current_ceremony_index();
-				let part: ParticipantIndexType = EncointerCeremonies::participant_index(
-					(currency_id, ceremony_index),
-					AccountId::from(who),
-				);
-				Some(part.encode())
-			},
+			/*
 			TrustedGetter::ceremonies_attestations(who, community_id) => {
 				let ceremony_index = pallet_encointer_scheduler::Pallet::<
 					ita_sgx_runtime::Runtime,
 				>::current_ceremony_index();
-				let attestation_index = EncointerCeremonies::attestation_index(
-					(community_id, ceremony_index), who
-				);
+				let attestation_index =
+					EncointerCeremonies::attestation_index((community_id, ceremony_index), who);
 				let attestations = EncointerCeremonies::attestation_registry(
-					(community_id, ceremony_index), attestation_index
+					(community_id, ceremony_index),
+					attestation_index,
 				);
 				Some(attestations.encode())
 			},
@@ -622,15 +609,6 @@ impl ExecuteGetter for TrustedGetterSigned {
 				}
 				Some(participants.encode())
 			},
-			/*
-			TrustedGetter::ceremonies_meetups(who, community_id) => {
-				//Master check
-			},
-			TrustedGetter::ceremonies_attestees(who, community_id) => {
-				//Master check
-			},
-
-			 */
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_nonce(who) => {
 				let evm_account = get_evm_account(&who);
@@ -664,8 +642,17 @@ impl ExecuteGetter for TrustedGetterSigned {
 	}
 
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
+		debug!("get_storage_hashes_to_update for TrustedGetter");
 		let mut key_hashes = Vec::new();
 		match self.getter {
+			TrustedGetter::encointer_balance(_, cid) => {
+				key_hashes.push(storage_map_key(
+					"EncointerBalances",
+					"DemurragePerBlock",
+					&cid,
+					&StorageHasher::Blake2_128Concat,
+				));
+			},
 			TrustedGetter::ceremonies_aggregated_account_data(_, _, _) => {
 				key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
 				let current_phase =
@@ -690,6 +677,13 @@ impl ExecuteGetter for PublicGetter {
 	fn execute(self) -> Option<Vec<u8>> {
 		match self {
 			PublicGetter::some_value => Some(42u32.encode()),
+			PublicGetter::encointer_total_issuance(community_id) => {
+				let updated_total_issuance = pallet_encointer_balances::Pallet::<
+					ita_sgx_runtime::Runtime,
+				>::total_issuance(community_id);
+				debug!("PublicGetter encointer_total_issuance");
+				Some(updated_total_issuance.encode())
+			},
 			PublicGetter::ceremonies_assignment_counts(community_id, ceremony_index) => {
 				let count = EncointerCeremonies::assignment_counts((community_id, ceremony_index));
 				Some(count.encode())
@@ -719,10 +713,6 @@ impl ExecuteGetter for PublicGetter {
 				let count = EncointerCeremonies::reputable_count((community_id, ceremony_index));
 				Some(count.encode())
 			},
-			PublicGetter::ceremonies_registered_endorsee_count(community_id, ceremony_index) => {
-				let count = EncointerCeremonies::endorsee_count((community_id, ceremony_index));
-				Some(count.encode())
-			},
 			PublicGetter::ceremonies_registered_newbies_count(community_id, ceremony_index) => {
 				let count = EncointerCeremonies::newbie_count((community_id, ceremony_index));
 				Some(count.encode())
@@ -731,10 +721,29 @@ impl ExecuteGetter for PublicGetter {
 				let count = EncointerCeremonies::endorsees_count((community_id, ceremony_index));
 				Some(count.encode())
 			},
+			PublicGetter::ceremonies_reward(community_id) => {
+				let reward = EncointerCeremonies::nominal_income(&community_id);
+				Some(reward.encode())
+			},
 		}
 	}
 
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		Vec::new()
+		debug!("get_storage_hashes_to_update for PublicGetter");
+		let mut key_hashes = Vec::new();
+		match self {
+			PublicGetter::ceremonies_reward(community_id) => {
+				key_hashes.push(storage_map_key(
+					"EncointerCommunities",
+					"NominalIncome",
+					&community_id,
+					&StorageHasher::Blake2_128Concat,
+				));
+			},
+			_ => {
+				debug!("No storage updates needed...");
+			},
+		};
+		key_hashes
 	}
 }

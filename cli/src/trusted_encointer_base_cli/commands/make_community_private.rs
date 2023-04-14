@@ -60,7 +60,7 @@ impl MakeCommunityPrivateCommand {
 
 		let nonce = get_layer_two_nonce!(who, cli, trusted_args);
 
-		println!(
+		info!(
 			"who {} send trusted call ceremonies_migrate_to_private_community {}",
 			who.public(),
 			cid,

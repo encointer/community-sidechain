@@ -23,6 +23,16 @@ Starts all services (node and workers), using the `encointer-worker:dev` images 
 
 ## Run the demos
 
+### Demo private community
+Build
+```
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f docker-compose.yml -f demo-private-community.yml build --build-arg WORKER_MODE_ARG=sidechain
+```
+Run
+```
+docker compose -f docker-compose.yml -f demo-private-community.yml up demo-private-community --exit-code-from demo-private-community
+```
+
 ### Demo indirect invocation (M6)
 Build
 ```

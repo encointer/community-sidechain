@@ -44,6 +44,6 @@ impl NextPhaseCommand {
 		// send and watch extrinsic until finalized
 		info!("Master {} trigger manually next phase ", from_account.public().to_ss58check());
 		let tx_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
-		println!("[+] Next Phase got finalized. Hash: {:?}\n", tx_hash);
+		info!("[+] Next Phase got finalized. Hash: {:?}\n", tx_hash);
 	}
 }

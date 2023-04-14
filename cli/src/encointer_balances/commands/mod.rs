@@ -15,12 +15,6 @@
 
 */
 
-pub mod attest_attendees;
-pub mod ceremonies_command_utils;
-pub mod claim_rewards;
-pub mod community_infos;
-pub mod list_attestees;
-pub mod list_meetups;
-pub mod list_participants;
-pub mod register_participant;
-pub mod upgrade_registration;
+pub mod balances_command_utils;
+pub mod set_fee_conversion_factor;
+pub mod transfer_all;
