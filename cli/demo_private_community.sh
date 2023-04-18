@@ -87,6 +87,9 @@ echo "* Migrating public community ${COMMUNITY_IDENTIFIER} to private"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} make-community-private //Alice ${COMMUNITY_IDENTIFIER}
 echo ""
 
+echo "* Waiting 10 seconds"
+sleep 10
+
 echo "* Registering participants : "
 echo "- Registering 3 bootstrappers : "
 echo "  //Alice,"
@@ -193,7 +196,7 @@ echo ""
 echo "* Verifying Bob's balance in community currency"
 echo ""
 echo "1) Reward: "
-if [ $REWARDED_BOB_COMMUNITY_CURRENCY -ge $INIT_BOB_COMMUNITY_CURRENCY ]; then
+if [ $REWARDED_BOB_COMMUNITY_CURRENCY -gt $INIT_BOB_COMMUNITY_CURRENCY ]; then
   echo "Bob's balance in community community has increased ($REWARDED_BOB_COMMUNITY_CURRENCY)."
 else
   echo "test failed: Bob has not received the rewards. His balance in community currency should be greater than $INIT_BOB_COMMUNITY_CURRENCY"
@@ -201,7 +204,7 @@ else
 fi
 
 echo "2) Demurrage:"
-if [ $REWARDED_BOB_COMMUNITY_CURRENCY -ge $DEMURRAGE_BOB_COMMUNITY_CURRENCY ]; then
+if [ $REWARDED_BOB_COMMUNITY_CURRENCY -gt $DEMURRAGE_BOB_COMMUNITY_CURRENCY ]; then
   echo "Bob's balance in community currency got devalued ($DEMURRAGE_BOB_COMMUNITY_CURRENCY)"
 else
   echo "test failed: It seems that no demurrage was applied on Bob's balances in community currency: $REWARDED_BOB_COMMUNITY_CURRENCY should be greater than $DEMURRAGE_BOB_COMMUNITY_CURRENCY"
@@ -225,6 +228,7 @@ else
     echo "test failed: Bob's balance in native currency has changed: $REWARDED_BOB_NATIVE should be $INIT_BOB_NATIVE"
     exit 1
 fi
+echo "Test passed"
 echo ""
 
 exit 0
