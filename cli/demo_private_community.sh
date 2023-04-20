@@ -196,7 +196,7 @@ echo ""
 echo "* Verifying Bob's balance in community currency"
 echo ""
 echo "1) Reward: "
-if [ $REWARDED_BOB_COMMUNITY_CURRENCY -gt $INIT_BOB_COMMUNITY_CURRENCY ]; then
+if [ bc <<< "$REWARDED_BOB_COMMUNITY_CURRENCY > $INIT_BOB_COMMUNITY_CURRENCY" ]; then
   echo "Bob's balance in community community has increased ($REWARDED_BOB_COMMUNITY_CURRENCY)."
 else
   echo "test failed: Bob has not received the rewards. His balance in community currency should be greater than $INIT_BOB_COMMUNITY_CURRENCY"
@@ -204,7 +204,7 @@ else
 fi
 
 echo "2) Demurrage:"
-if [ $REWARDED_BOB_COMMUNITY_CURRENCY -gt $DEMURRAGE_BOB_COMMUNITY_CURRENCY ]; then
+if [ bc <<< "$REWARDED_BOB_COMMUNITY_CURRENCY > $DEMURRAGE_BOB_COMMUNITY_CURRENCY" ]; then
   echo "Bob's balance in community currency got devalued ($DEMURRAGE_BOB_COMMUNITY_CURRENCY)"
 else
   echo "test failed: It seems that no demurrage was applied on Bob's balances in community currency: $REWARDED_BOB_COMMUNITY_CURRENCY should be greater than $DEMURRAGE_BOB_COMMUNITY_CURRENCY"
@@ -214,7 +214,7 @@ echo ""
 
 echo "* Verifying Bob's balance in native currency :"
 echo "1) No reward:"
-if [ $REWARDED_BOB_NATIVE -eq $INIT_BOB_NATIVE ]; then
+if [ bc <<< "$REWARDED_BOB_NATIVE = $INIT_BOB_NATIVE" ]; then
   echo "Bob's balance in native currency has not changed ($REWARDED_BOB_NATIVE)"
 else
     echo "test failed: Bob's balance in native currency has changed: $REWARDED_BOB_NATIVE should be $INIT_BOB_NATIVE"
@@ -222,7 +222,7 @@ else
 fi
 
 echo "2) No demurrage:"
-if [ $DEMURRAGE_BOB_NATIVE -eq $INIT_BOB_NATIVE ]; then
+if [ bc <<< "$DEMURRAGE_BOB_NATIVE = $INIT_BOB_NATIVE" ]; then
   echo "Bob's balance in native currency has not changed ($DEMURRAGE_BOB_NATIVE)"
 else
     echo "test failed: Bob's balance in native currency has changed: $REWARDED_BOB_NATIVE should be $INIT_BOB_NATIVE"

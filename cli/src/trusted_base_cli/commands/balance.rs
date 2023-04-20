@@ -22,7 +22,10 @@ use crate::{
 	trusted_operation::perform_trusted_operation,
 	Cli,
 };
-use encointer_primitives::{balances::EncointerBalanceConverter, communities::CommunityIdentifier};
+use encointer_primitives::{
+	balances::EncointerBalanceConverter,
+	communities::{CommunityIdentifier, LossyInto},
+};
 use ita_stf::{KeyPair, TrustedGetter, TrustedOperation};
 use sp_core::Pair;
 use sp_runtime::traits::Convert;
@@ -48,8 +51,9 @@ impl BalanceCommand {
 						.sign(&KeyPair::Sr25519(who))
 						.into();
 				let res = perform_trusted_operation(cli, trusted_args, &top);
-				let amount = decode_encointer_balance(res);
-				println!("{}", EncointerBalanceConverter::convert(amount.unwrap_or_default()),);
+				let balance_type = decode_encointer_balance(res).unwrap_or_default();
+				let amount: f64 = balance_type.lossy_into();
+				println!("{}", amount);
 			},
 			None => {
 				println!("{}", get_balance(cli, trusted_args, &self.account).unwrap_or_default());
