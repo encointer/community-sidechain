@@ -20,12 +20,8 @@ use crate::{
 	trusted_commands::TrustedArgs, trusted_operation::perform_trusted_operation, Cli,
 };
 use codec::Decode;
-use encointer_primitives::{
-	balances::EncointerBalanceConverter,
-	communities::{CommunityIdentifier, LossyInto, NominalIncome},
-};
+use encointer_primitives::communities::{CommunityIdentifier, LossyInto, NominalIncome};
 use ita_stf::{PublicGetter, TrustedOperation};
-use sp_runtime::traits::Convert;
 use std::str::FromStr;
 
 /// List various public information for an encointer community.  

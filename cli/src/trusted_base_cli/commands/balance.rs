@@ -22,13 +22,9 @@ use crate::{
 	trusted_operation::perform_trusted_operation,
 	Cli,
 };
-use encointer_primitives::{
-	balances::EncointerBalanceConverter,
-	communities::{CommunityIdentifier, LossyInto},
-};
+use encointer_primitives::communities::{CommunityIdentifier, LossyInto};
 use ita_stf::{KeyPair, TrustedGetter, TrustedOperation};
 use sp_core::Pair;
-use sp_runtime::traits::Convert;
 use std::str::FromStr;
 
 #[derive(Parser)]
