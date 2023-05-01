@@ -20,11 +20,8 @@ trap "echo The demo is terminated (SIGTERM); exit 1" SIGTERM
 # usage:
 #   demo_private_community.sh -p <NODEPORT> -P <WORKERPORT> -u <NODE_URL> -V <WORKER_URL> -C <CLIENT_BINARY_PATH>
 
-while getopts ":m:p:A:B:t:u:W:V:C:" opt; do
+while getopts ":m:p:A:B:u:W:V:C:" opt; do
     case $opt in
-        t)
-            TEST=$OPTARG
-            ;;
         m)
             READMRENCLAVE=$OPTARG
             ;;
@@ -89,6 +86,9 @@ echo ""
 echo "* Migrating public community ${COMMUNITY_IDENTIFIER} to private"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} make-community-private //Alice ${COMMUNITY_IDENTIFIER}
 echo ""
+
+echo "* Waiting 10 seconds"
+sleep 10
 
 echo "* Registering participants : "
 echo "- Registering 3 bootstrappers : "
@@ -167,14 +167,13 @@ echo "* Waiting enough time, such that xt's are processed... 30 seconds"
 sleep 30
 echo ""
 
-echo "* Check :  "
+echo "* Info :  "
 echo ""
 echo "Community infos :"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} community-infos //Alice ${COMMUNITY_IDENTIFIER}
 echo ""
 
-echo "Check Bob balances"
-
+echo "Bob's balances:"
 echo "Initial balances"
 echo "  in native currency: $INIT_BOB_NATIVE"
 echo "  in community currency: $INIT_BOB_COMMUNITY_CURRENCY"
@@ -193,5 +192,43 @@ DEMURRAGE_BOB_COMMUNITY_CURRENCY=$(${CLIENTWORKER1} trusted --mrenclave ${MRENCL
 echo "  in community currency: $DEMURRAGE_BOB_COMMUNITY_CURRENCY"
 echo ""
 
-#Todo test
+# The following tests are for automated CI.
+echo "* Verifying Bob's balance in community currency"
+echo ""
+echo "1) Reward: "
+if [ bc <<< "$REWARDED_BOB_COMMUNITY_CURRENCY > $INIT_BOB_COMMUNITY_CURRENCY" ]; then
+  echo "Bob's balance in community community has increased ($REWARDED_BOB_COMMUNITY_CURRENCY)."
+else
+  echo "test failed: Bob has not received the rewards. His balance in community currency should be greater than $INIT_BOB_COMMUNITY_CURRENCY"
+  exit 1
+fi
+
+echo "2) Demurrage:"
+if [ bc <<< "$REWARDED_BOB_COMMUNITY_CURRENCY > $DEMURRAGE_BOB_COMMUNITY_CURRENCY" ]; then
+  echo "Bob's balance in community currency got devalued ($DEMURRAGE_BOB_COMMUNITY_CURRENCY)"
+else
+  echo "test failed: It seems that no demurrage was applied on Bob's balances in community currency: $REWARDED_BOB_COMMUNITY_CURRENCY should be greater than $DEMURRAGE_BOB_COMMUNITY_CURRENCY"
+  exit 1
+fi
+echo ""
+
+echo "* Verifying Bob's balance in native currency :"
+echo "1) No reward:"
+if [ bc <<< "$REWARDED_BOB_NATIVE = $INIT_BOB_NATIVE" ]; then
+  echo "Bob's balance in native currency has not changed ($REWARDED_BOB_NATIVE)"
+else
+    echo "test failed: Bob's balance in native currency has changed: $REWARDED_BOB_NATIVE should be $INIT_BOB_NATIVE"
+    exit 1
+fi
+
+echo "2) No demurrage:"
+if [ bc <<< "$DEMURRAGE_BOB_NATIVE = $INIT_BOB_NATIVE" ]; then
+  echo "Bob's balance in native currency has not changed ($DEMURRAGE_BOB_NATIVE)"
+else
+    echo "test failed: Bob's balance in native currency has changed: $REWARDED_BOB_NATIVE should be $INIT_BOB_NATIVE"
+    exit 1
+fi
+echo "Test passed"
+echo ""
+
 exit 0

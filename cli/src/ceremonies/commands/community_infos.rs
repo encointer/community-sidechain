@@ -20,12 +20,8 @@ use crate::{
 	trusted_commands::TrustedArgs, trusted_operation::perform_trusted_operation, Cli,
 };
 use codec::Decode;
-use encointer_primitives::{
-	balances::EncointerBalanceConverter,
-	communities::{CommunityIdentifier, NominalIncome},
-};
+use encointer_primitives::communities::{CommunityIdentifier, LossyInto, NominalIncome};
 use ita_stf::{PublicGetter, TrustedOperation};
-use sp_runtime::traits::Convert;
 use std::str::FromStr;
 
 /// List various public information for an encointer community.  
@@ -46,15 +42,16 @@ impl CommunityInfosCommand {
 		let top: TrustedOperation =
 			PublicGetter::encointer_total_issuance(community_identifier).into();
 		let encoded_total_issuance = perform_trusted_operation(cli, trusted_args, &top);
-		let total_issuance = decode_encointer_balance(encoded_total_issuance);
-		println!(
-			"Total inssuance {}",
-			EncointerBalanceConverter::convert(total_issuance.unwrap_or_default()),
-		);
+		let total_issuance_fixed =
+			decode_encointer_balance(encoded_total_issuance).unwrap_or_default();
+		let total_issuance: f64 = total_issuance_fixed.lossy_into();
+		println!("Total inssuance {}", total_issuance,);
 
 		let top: TrustedOperation = PublicGetter::ceremonies_reward(community_identifier).into();
 		let encoded_reward = perform_trusted_operation(cli, trusted_args, &top).unwrap();
-		let reward = NominalIncome::decode(&mut encoded_reward.as_slice()).unwrap_or_default();
+		let reward_fixed =
+			NominalIncome::decode(&mut encoded_reward.as_slice()).unwrap_or_default();
+		let reward: f64 = reward_fixed.lossy_into();
 		println!("Reward {} ", reward);
 
 		//Todo:
